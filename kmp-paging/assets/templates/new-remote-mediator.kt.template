@@ -1,0 +1,87 @@
+package {your.package}.data.pagination
+
+import androidx.paging.PagingState
+import {your.package}.core.network.result.ApiResult
+import {your.package}.core.paging.BaseRemoteMediator
+import {your.package}.data.local.AppDatabase
+import {your.package}.data.local.entity.{{ENTITY_NAME}}Entity
+import {your.package}.data.remote.service.{{SERVICE_NAME}}
+
+class {{ENTITY_NAME}}RemoteMediator(
+    private val service: {{SERVICE_NAME}},
+    private val database: AppDatabase,
+) : BaseRemoteMediator<{{ENTITY_NAME}}Entity>(database, "{{TYPE_STRING}}") {
+
+    override suspend fun networkResponse(
+        page: Int,
+        state: PagingState<Int, {{ENTITY_NAME}}Entity>,
+    ): ApiResult<List<{{ENTITY_NAME}}Entity>> {
+        return service.{{API_METHOD}}(page = page, limit = state.config.pageSize)
+    }
+
+    override suspend fun clearCachedDataAfterRefresh() {
+        database.{{DAO_PROPERTY}}.clear()
+    }
+
+    override suspend fun saveResult(newData: List<{{ENTITY_NAME}}Entity>) {
+        database.{{DAO_PROPERTY}}.upsertAll(newData)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TEMPLATE INSTRUCTIONS
+// ---------------------------------------------------------------------------
+// Replace the following placeholders:
+//
+//   {{ENTITY_NAME}}   - PascalCase entity name (e.g., Product, Message, Order)
+//   {{TYPE_STRING}}    - Unique lowercase type string for remote keys (e.g., "products")
+//   {{SERVICE_NAME}}   - Ktorfit service interface (e.g., ProductService)
+//   {{API_METHOD}}     - Service method returning paginated data (e.g., getProducts)
+//   {{DAO_PROPERTY}}   - AppDatabase DAO property name (e.g., productDao)
+//
+// Prerequisites:
+//
+// 1. Entity must implement PageableEntity:
+//
+//    @Entity(tableName = "{{TYPE_STRING}}")
+//    data class {{ENTITY_NAME}}Entity(
+//        @PrimaryKey
+//        override val id: String,
+//        // ...other fields
+//    ) : PageableEntity
+//
+// 2. DAO must have pagingSource(), upsertAll(), and clear():
+//
+//    @Dao
+//    interface {{ENTITY_NAME}}Dao {
+//        @Query("SELECT * FROM {{TYPE_STRING}} ORDER BY id ASC")
+//        fun pagingSource(): PagingSource<Int, {{ENTITY_NAME}}Entity>
+//
+//        @Upsert
+//        suspend fun upsertAll(items: List<{{ENTITY_NAME}}Entity>)
+//
+//        @Query("DELETE FROM {{TYPE_STRING}}")
+//        suspend fun clear()
+//    }
+//
+// 3. Register entity in AppDatabase @Database(entities = [...])
+//
+// 4. Add DAO as abstract property in AppDatabase:
+//    abstract val {{DAO_PROPERTY}}: {{ENTITY_NAME}}Dao
+//
+// 5. Repository pagingFlow() -- uses createPager top-level function:
+//
+//    @OptIn(ExperimentalPagingApi::class)
+//    override fun pagingFlow(): Flow<PagingData<{{ENTITY_NAME}}Entity>> {
+//        return createPager(
+//            pagingSourceFactory = { database.{{DAO_PROPERTY}}.pagingSource() },
+//            remoteMediator = {{ENTITY_NAME}}RemoteMediator(
+//                service = service,
+//                database = database,
+//            ),
+//        ).flow
+//    }
+//
+// 6. ViewModel:
+//    val pagingFlow = repository.pagingFlow().cachedIn(viewModelScope)
+// ---------------------------------------------------------------------------

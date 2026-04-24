@@ -1,0 +1,30 @@
+<vector
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:width="{{width_dp}}dp"
+        android:height="{{height_dp}}dp"
+        android:viewportWidth="{{viewport_width}}"
+        android:viewportHeight="{{viewport_height}}">
+    <!--
+        Place this file in:
+        - composeApp/src/commonMain/composeResources/drawable/  (shared, cross-platform)
+        - composeApp/src/androidMain/res/drawable/              (Android-only)
+
+        File naming rules:
+        - Lowercase letters, digits, underscores
+        - Hyphens allowed in composeResources (converted to underscores in generated code)
+        - No spaces or uppercase
+
+        Access from composable (shared):
+            import org.jetbrains.compose.resources.painterResource
+            import mobile.composeapp.generated.resources.Res
+            import mobile.composeapp.generated.resources.{{resource_name}}
+
+            Image(
+                painter = painterResource(Res.drawable.{{resource_name}}),
+                contentDescription = "{{description}}"
+            )
+    -->
+    <path
+            android:pathData="{{path_data}}"
+            android:fillColor="{{fill_color}}"/>
+</vector>

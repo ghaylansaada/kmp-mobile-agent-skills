@@ -1,0 +1,38 @@
+// New Background Task: {{TASK}}
+// Replace: {{TASK}} (e.g. Cleanup), {{task_snake}} (e.g. cleanup)
+
+// --- FILE: core/background/{{TASK}}Task.kt ---
+
+import kotlin.coroutines.cancellation.CancellationException
+
+class {{TASK}}Task : BackgroundTask {
+    override val taskId: String = TASK_ID
+
+    override suspend fun execute(): BackgroundTaskResult {
+        return try {
+            // TODO: Add task logic here
+            BackgroundTaskResult.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            BackgroundTaskResult.Retry
+        }
+    }
+
+    companion object {
+        const val TASK_ID = "{your.package}.{{task_snake}}"
+    }
+}
+
+// --- Android: Add when branch in AppWorker.doWork() ---
+// {{TASK}}Task.TASK_ID -> {{task_snake}}Task
+
+// --- iOS: Add to BackgroundTasksIos.kt ---
+// 1. register{{TASK}}Task() in registerAndScheduleBackgroundTasks()
+// 2. Re-schedule in completion handler (iOS does NOT auto-repeat)
+
+// --- Info.plist: Add task ID ---
+// <string>{your.package}.{{task_snake}}</string>
+
+// --- Koin: Add to backgroundModule() ---
+// single<{{TASK}}Task> { {{TASK}}Task() }

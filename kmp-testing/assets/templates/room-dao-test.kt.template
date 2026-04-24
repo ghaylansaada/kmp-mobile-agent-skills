@@ -1,0 +1,74 @@
+package {your.package}.room
+
+import android.content.Context
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import {your.package}.data.local.AppDatabase
+import {your.package}.data.local.dao.{{DaoName}}
+import {your.package}.data.local.entity.{{EntityName}}
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/**
+ * GOTCHA: Always call database.close() in @After. Leaving it open leaks
+ * the in-memory SQLite connection and causes "database is locked" errors
+ * when tests run in parallel.
+ *
+ * GOTCHA: allowMainThreadQueries() is required even in unit tests. Without
+ * it, Room throws "Cannot access database on the main thread" because
+ * Room's thread check fires regardless of test environment.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+class {{DaoName}}Test {
+
+    private lateinit var database: AppDatabase
+    private lateinit var dao: {{DaoName}}
+
+    @Before
+    fun setUp() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        dao = database.{{daoAccessor}}()
+    }
+
+    @After
+    fun tearDown() {
+        database.close()
+    }
+
+    @Test
+    fun insertAndRetrieve() = runTest {
+        // TODO: Create entity
+        // val entity = {{EntityName}}(...)
+        // dao.insert(entity)
+        // val retrieved = dao.getById("1")
+        // assertEquals(entity, retrieved)
+    }
+
+    @Test
+    fun observeAllEmitsUpdates() = runTest {
+        // TODO: Insert entities and observe
+        // val items = dao.observeAll().first()
+        // assertEquals(expectedCount, items.size)
+    }
+
+    @Test
+    fun deleteRemovesEntity() = runTest {
+        // TODO: Insert then delete
+        // dao.insert(entity)
+        // dao.delete(entity)
+        // assertNull(dao.getById("1"))
+    }
+}

@@ -1,0 +1,139 @@
+package {your.package}.core.transfer.custom
+
+import {your.package}.core.transfer.core.BaseTransferTask
+import {your.package}.core.transfer.core.FileChunk
+import {your.package}.core.transfer.core.TaskState
+import {your.package}.core.transfer.core.TransferException
+import {your.package}.core.transfer.core.retryWithBackoff
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
+
+/**
+ * Custom transfer task template.
+ *
+ * Replace TODO placeholders with your implementation.
+ */
+class CustomTransferTask(
+    scope: CoroutineScope,
+    private val url: String,
+    private val client: HttpClient,
+    private val totalBytes: Long,
+    chunkSize: Int = 512 * 1024,
+    parallelism: Int = 4,
+) : BaseTransferTask(scope, parallelism, chunkSize) {
+
+    override suspend fun execute() {
+
+        // Step 1: Determine how much has already been transferred (for resume)
+        val alreadyTransferred = 0L // TODO: Query existing progress
+        bytesTransferredInternal = alreadyTransferred
+
+        // Step 2: Update state flow with initial values
+        stateFlow.update {
+            it.copy(
+                totalBytes = totalBytes,
+                bytesTransferred = alreadyTransferred,
+                state = TaskState.RUNNING,
+                error = null,
+            )
+        }
+
+        // Step 3: Plan chunks
+        val chunks = planChunks(
+            totalBytes = totalBytes,
+            chunkSize = chunkSize,
+            alreadyTransferred = alreadyTransferred,
+        )
+
+        // Step 4: Process chunks in parallel with bounded concurrency
+        coroutineScope {
+            chunks.forEach { chunk ->
+                launch {
+                    semaphore.withPermit {
+                        ensureActive()
+
+                        retryWithBackoff {
+                            // TODO: Perform the actual transfer for this chunk
+                            val data = transferChunk(chunk)
+
+                            // TODO: Persist or process the transferred data
+                            processChunkData(chunk, data)
+
+                            // Step 5: Update progress atomically
+                            val currentTotal = progressMutex.withLock {
+                                bytesTransferredInternal += data.size
+                                bytesTransferredInternal
+                            }
+
+                            stateFlow.update { snap ->
+                                snap.copy(
+                                    bytesTransferred = currentTotal,
+                                    speedBytesPerSec = estimator.update(currentTotal),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Transfers a single chunk from the remote resource.
+     * TODO: Implement your HTTP request logic here.
+     */
+    private suspend fun transferChunk(chunk: FileChunk): ByteArray {
+        val response = client.get(url) {
+            header(HttpHeaders.Range, "bytes=${chunk.start}-${chunk.end}")
+        }
+
+        if (response.status != HttpStatusCode.PartialContent &&
+            response.status != HttpStatusCode.OK
+        ) {
+            throw TransferException(
+                status = response.status,
+                message = "Transfer failed for chunk ${chunk.start}-${chunk.end}",
+                cause = Exception(response.bodyAsText()),
+            )
+        }
+
+        return response.body<ByteArray>()
+    }
+
+    /**
+     * Processes or persists the transferred chunk data.
+     * TODO: Write to file, stream to database, etc.
+     */
+    private suspend fun processChunkData(chunk: FileChunk, data: ByteArray) {
+        // TODO: e.g., writer.writeAt(chunk.start, data)
+    }
+
+    private fun planChunks(
+        totalBytes: Long,
+        chunkSize: Int,
+        alreadyTransferred: Long,
+    ): List<FileChunk> {
+        require(chunkSize > 0) { "Chunk size must be greater than 0" }
+        val chunks = mutableListOf<FileChunk>()
+        var start = alreadyTransferred
+        while (start < totalBytes) {
+            val end = minOf(start + chunkSize - 1, totalBytes - 1)
+            val size = end - start + 1
+            chunks += FileChunk(start = start, end = end, size = size)
+            start = end + 1
+        }
+        return chunks
+    }
+}

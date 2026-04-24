@@ -1,0 +1,97 @@
+package {your.package}.integration
+
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
+import org.koin.dsl.module
+import org.koin.test.KoinTest
+import org.koin.test.inject
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+
+/**
+ * Standalone MockEngine test template.
+ *
+ * GOTCHA: MockEngine matches on exact URL path including query parameters.
+ * If the real code calls /api/{{endpoint}}?page=1, the handler must match
+ * that exact path+query or it falls through to the else branch.
+ *
+ * GOTCHA: MockEngine processes concurrent requests in non-deterministic
+ * order. Do not assert on request ordering.
+ */
+class {{TestClassName}} : KoinTest {
+
+    // TODO: Declare the component under test
+    // private val repository: YourRepository by inject()
+
+    private val mockEngine = MockEngine { request ->
+        when (request.url.encodedPath) {
+            "/api/{{endpoint}}" -> respond(
+                content = """[{"id": "1", "name": "Test"}]""",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+            else -> respond(
+                content = """{"error": "Not found"}""",
+                status = HttpStatusCode.NotFound,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+    }
+
+    @BeforeTest
+    fun setUp() {
+        startKoin {
+            modules(
+                module {
+                    single {
+                        Json {
+                            ignoreUnknownKeys = true
+                            isLenient = true
+                        }
+                    }
+                    single {
+                        HttpClient(mockEngine) {
+                            install(ContentNegotiation) {
+                                json(get<Json>())
+                            }
+                        }
+                    }
+                    // TODO: Add repository and other dependencies
+                    // single<YourRepository> { YourRepositoryImpl(get()) }
+                }
+            )
+        }
+    }
+
+    @AfterTest
+    fun tearDown() {
+        try { stopKoin() } catch (_: IllegalStateException) {}
+    }
+
+    @Test
+    fun fetchReturnsSuccessWithMockedData() = runTest {
+        // TODO: Call repository method
+        // val result = repository.fetchAll()
+        // assertIs<ApiResult.Success<*>>(result)
+    }
+
+    @Test
+    fun fetchReturnsErrorForUnknownEndpoint() = runTest {
+        // TODO: Call with unknown endpoint
+        // val result = repository.getById("unknown")
+        // assertIs<ApiResult.Error>(result)
+    }
+}

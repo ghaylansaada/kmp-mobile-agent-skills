@@ -1,0 +1,135 @@
+# Fastlane iOS lanes template
+# Place in: fastlane/Fastfile (merge with existing Android lanes if present)
+# Replace {your.package} with your actual bundle identifier.
+#
+# The KMP framework must be built BEFORE archiving the iOS app.
+# On CI, do NOT use embedAndSignAppleFrameworkForXcode -- it depends on
+# Xcode env vars not available outside of an Xcode build.
+
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    setup_ci if ENV["CI"]
+  end
+
+  # -- Helpers --
+
+  def asc_api_key
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: Base64.decode64(ENV["APP_STORE_CONNECT_KEY_BASE64"]),
+      is_key_content_base64: false
+    )
+  end
+
+  # -- Code Signing --
+
+  desc "Sync code signing certificates via match"
+  lane :sync_certificates do
+    match(type: "appstore", readonly: is_ci)
+    match(type: "development", readonly: is_ci)
+  end
+
+  # -- Build --
+
+  desc "Build KMP framework and archive iOS app"
+  lane :build do
+    sync_certificates
+    gradle(task: ":composeApp:linkReleaseFrameworkIosArm64", project_dir: "..")
+
+    build_app(
+      project: "iosApp/iosApp.xcodeproj",
+      scheme: "iosApp",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "build/ipa",
+      output_name: "iosApp.ipa",
+      export_options: {
+        signingStyle: "manual",
+        provisioningProfiles: {
+          "{your.package}" => "{your.package} AppStore"
+        }
+      }
+    )
+  end
+
+  # -- Distribution --
+
+  desc "Upload to TestFlight"
+  lane :beta do
+    build
+    upload_to_testflight(
+      api_key: asc_api_key,
+      ipa: "build/ipa/iosApp.ipa",
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Submit to App Store"
+  lane :release do
+    build
+    upload_to_app_store(
+      api_key: asc_api_key,
+      ipa: "build/ipa/iosApp.ipa",
+      skip_screenshots: true,
+      skip_metadata: false,
+      submit_for_review: false,
+      automatic_release: false,
+      force: true
+    )
+  end
+
+  desc "Distribute to QA via Firebase App Distribution"
+  lane :distribute_qa do
+    match(type: "adhoc")
+    gradle(task: ":composeApp:linkReleaseFrameworkIosArm64", project_dir: "..")
+
+    build_app(
+      project: "iosApp/iosApp.xcodeproj",
+      scheme: "iosApp",
+      configuration: "Release",
+      export_method: "ad-hoc",
+      output_directory: "build/ipa",
+      output_name: "iosApp-adhoc.ipa"
+    )
+
+    firebase_app_distribution(
+      app: ENV["FIREBASE_IOS_APP_ID"],
+      ipa_path: "build/ipa/iosApp-adhoc.ipa",
+      groups: "qa-team",
+      release_notes: "QA build #{Time.now.strftime('%Y-%m-%d %H:%M')}",
+      firebase_cli_token: ENV["FIREBASE_CLI_TOKEN"]
+    )
+  end
+
+  # -- Crash Symbolication --
+
+  desc "Upload dSYMs to Firebase Crashlytics"
+  lane :upload_dsyms do
+    upload_symbols_to_crashlytics(
+      dsym_path: "build/iosApp.xcarchive/dSYMs",
+      gsp_path: "iosApp/iosApp/GoogleService-Info.plist"
+    )
+  end
+
+  # -- Versioning --
+
+  desc "Increment build number (auto from TestFlight)"
+  lane :bump_build do
+    api_key = asc_api_key
+    increment_build_number(
+      xcodeproj: "iosApp/iosApp.xcodeproj",
+      build_number: (latest_testflight_build_number(api_key: api_key) + 1).to_s
+    )
+  end
+
+  desc "Increment version number"
+  lane :bump_version do |options|
+    increment_version_number(
+      xcodeproj: "iosApp/iosApp.xcodeproj",
+      bump_type: options[:type] || "patch"
+    )
+  end
+end

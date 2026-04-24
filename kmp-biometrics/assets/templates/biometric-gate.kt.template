@@ -1,0 +1,77 @@
+// Biometric-Gated Feature: {{FEATURE}}
+// Replace: {{FEATURE}} (e.g. Payment), {{feature_lower}} (e.g. payment), {{PACKAGE}} (e.g. com.example.app)
+
+// --- FILE: presentation/{{feature_lower}}/{{FEATURE}}UiState.kt ---
+
+package {{PACKAGE}}.presentation.{{feature_lower}}
+
+data class {{FEATURE}}UiState(
+    val isAuthenticated: Boolean = false,
+    val biometricAvailable: Boolean = false,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+)
+
+// --- FILE: presentation/{{feature_lower}}/{{FEATURE}}ViewModel.kt ---
+
+package {{PACKAGE}}.presentation.{{feature_lower}}
+
+import {{PACKAGE}}.core.biometrics.BiometricAuthenticator
+import {{PACKAGE}}.core.biometrics.BiometricResult
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+class {{FEATURE}}ViewModel(
+    private val biometricAuthenticator: BiometricAuthenticator,
+) : ViewModel() {
+    private val _state = MutableStateFlow({{FEATURE}}UiState())
+    val state: StateFlow<{{FEATURE}}UiState> = _state.asStateFlow()
+
+    init {
+        _state.update {
+            it.copy(biometricAvailable = biometricAuthenticator.canAuthenticate())
+        }
+    }
+
+    fun authenticate() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            val result = biometricAuthenticator.authenticate(
+                title = getString(Res.string.biometric_title_{{feature_lower}}),
+                subtitle = getString(Res.string.biometric_subtitle_verify_identity),
+                allowDeviceCredential = true,
+            )
+            _state.update { current ->
+                when (result) {
+                    is BiometricResult.Success -> current.copy(
+                        isAuthenticated = true,
+                        isLoading = false,
+                    )
+                    is BiometricResult.Cancelled -> current.copy(isLoading = false)
+                    is BiometricResult.NotAvailable -> current.copy(
+                        isLoading = false,
+                        errorMessage = getString(Res.string.biometric_not_available),
+                    )
+                    is BiometricResult.NotEnrolled -> current.copy(
+                        isLoading = false,
+                        errorMessage = getString(Res.string.biometric_enroll_in_settings),
+                    )
+                    is BiometricResult.Failure -> current.copy(
+                        isLoading = false,
+                        errorMessage = result.message,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// --- Koin DI ---
+// fun {{feature_lower}}Module() = module {
+//     viewModel<{{FEATURE}}ViewModel> { {{FEATURE}}ViewModel(get()) }
+// }

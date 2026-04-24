@@ -1,0 +1,97 @@
+/**
+ * Template: Feature Navigation (Navigation 3)
+ *
+ * Replace {{FeatureName}} with your feature name (e.g., "Notifications").
+ * Replace {{featureName}} with the camelCase name (e.g., "notifications").
+ * All user-visible strings must use stringResource(Res.string.xxx).
+ */
+
+package {your.package}.navigation
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.NavDisplay
+import androidx.navigation3.NavKey
+import androidx.navigation3.rememberNavBackStack
+import androidx.navigation3.entryProvider
+import androidx.savedstate.rememberSavedStateRegistryNavEntryDecorator
+import kotlinx.serialization.Serializable
+import org.jetbrains.compose.resources.stringResource
+import {your.package}.resources.Res
+import {your.package}.resources.*
+
+// --- NavKey Definitions ---
+
+@Serializable
+data object {{FeatureName}}ListKey : NavKey
+
+@Serializable
+data class {{FeatureName}}DetailKey(val id: String) : NavKey
+
+// --- Feature NavDisplay ---
+
+@Composable
+fun {{FeatureName}}NavDisplay(
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val backStack = rememberNavBackStack({{FeatureName}}ListKey)
+
+    NavDisplay(
+        backStack = backStack,
+        modifier = modifier,
+        entryDecorators = listOf(
+            rememberSavedStateRegistryNavEntryDecorator(),
+            rememberViewModelStoreNavEntryDecorator(),
+        ),
+        entryProvider = entryProvider {
+            entry<{{FeatureName}}ListKey> { key ->
+                {{FeatureName}}ListScreen(
+                    onNavigateToDetail = { id ->
+                        backStack.add({{FeatureName}}DetailKey(id = id))
+                    },
+                    onNavigateBack = {
+                        if (backStack.size <= 1) {
+                            onNavigateBack()
+                        } else {
+                            backStack.removeLastOrNull()
+                        }
+                    },
+                )
+            }
+
+            entry<{{FeatureName}}DetailKey> { key ->
+                {{FeatureName}}DetailScreen(
+                    itemId = key.id,
+                    onNavigateBack = { backStack.removeLastOrNull() },
+                )
+            }
+        },
+    )
+}
+
+// --- Screen Composables (replace with actual implementations) ---
+
+@Composable
+fun {{FeatureName}}ListScreen(
+    onNavigateToDetail: (String) -> Unit,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.material3.Text(
+        text = stringResource(Res.string.{{featureName}}_list_title),
+    )
+}
+
+@Composable
+fun {{FeatureName}}DetailScreen(
+    itemId: String,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.material3.Text(
+        text = stringResource(Res.string.{{featureName}}_detail_title),
+    )
+}

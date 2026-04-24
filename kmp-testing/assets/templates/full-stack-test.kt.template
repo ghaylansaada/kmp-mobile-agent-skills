@@ -1,0 +1,90 @@
+package {your.package}.integration
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
+import org.koin.test.KoinTest
+import org.koin.test.inject
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+
+/**
+ * Full-stack integration test template.
+ *
+ * Stack: MockEngine -> HttpClient -> API Service -> Repository -> ViewModel
+ *
+ * GOTCHA: Koin uses global state. Two test classes running in parallel will
+ * collide. Run integration tests with maxParallelForks = 1 or use
+ * koinApplication {} for test-local DI scope.
+ *
+ * GOTCHA: Always wrap stopKoin() in try-catch. If the test failed before
+ * startKoin() completed, stopKoin() throws IllegalStateException.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class {{TestClassName}} : KoinTest {
+
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    // TODO: Inject the top-level component (usually ViewModel)
+    // private val viewModel: YourViewModel by inject()
+
+    @BeforeTest
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+        startKoin {
+            modules(integrationTestModule())
+        }
+    }
+
+    @AfterTest
+    fun tearDown() {
+        try { stopKoin() } catch (_: IllegalStateException) {}
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun happyPathFlowsThroughEntireStack() = runTest {
+        // Act
+        // TODO: viewModel.loadData()
+
+        // Assert
+        // TODO: val state = viewModel.uiState.first()
+        // assertFalse(state.isLoading)
+        // assertEquals(expectedCount, state.items.size)
+        // assertNull(state.error)
+    }
+
+    @Test
+    fun errorPropagatesThroughEntireStack() = runTest {
+        // Reconfigure with error engine
+        try { stopKoin() } catch (_: IllegalStateException) {}
+        startKoin {
+            modules(
+                integrationTestModule(
+                    mockEngine = MockEngineFactory.create(
+                        MockEngineFactory.errorHandlers(message = "Test error")
+                    )
+                )
+            )
+        }
+
+        // Act
+        // TODO: val errorVm: YourViewModel by inject()
+        // errorVm.loadData()
+
+        // Assert
+        // TODO: val state = errorVm.uiState.first()
+        // assertFalse(state.isLoading)
+        // assertEquals("Test error", state.error)
+    }
+}

@@ -1,0 +1,15 @@
+# =============================================================================
+# ProGuard / R8 Rules for KMP App
+# =============================================================================
+# The canonical comprehensive ProGuard template lives in:
+#   kmp-release/assets/templates/proguard-rules.pro
+#
+# Copy that file to composeApp/proguard-rules.pro and replace {your.package}
+# with your actual package name.
+#
+# This skill (kmp-project-setup) covers HOW to wire ProGuard in build.gradle.kts.
+# For the actual keep rules, use kmp-release's template.
+#
+# If you need security-specific rules (SQLCipher, obfuscation), also see:
+#   kmp-security/assets/snippets/proguard-security-rules.pro
+# =============================================================================

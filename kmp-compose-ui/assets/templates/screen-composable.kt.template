@@ -1,0 +1,107 @@
+package {your.package}.presentation.{{feature_name}}
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import mobile.composeapp.generated.resources.Res
+import mobile.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
+import {your.package}.ui.components.buttons.AppPrimaryButton
+import {your.package}.ui.theme.AppTheme
+import org.koin.compose.koinInject
+
+/**
+ * Stateful screen composable -- collects ViewModel state and delegates to content.
+ * Do NOT add @Preview here; koinInject() crashes without Koin initialization.
+ */
+@Composable
+fun {{ScreenName}}Screen(
+    modifier: Modifier = Modifier,
+    viewModel: {{ScreenName}}ViewModel = koinInject(),
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    {{ScreenName}}ScreenContent(
+        modifier = modifier,
+        uiState = uiState,
+        onRefresh = { viewModel.refresh() },
+    )
+}
+
+/**
+ * Stateless content composable -- receives state as parameters.
+ * Safe for @Preview because it has no Koin or ViewModel dependencies.
+ */
+@Composable
+fun {{ScreenName}}ScreenContent(
+    modifier: Modifier = Modifier,
+    uiState: {{ScreenName}}UiState,
+    onRefresh: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(AppTheme.spacing.lg),
+    ) {
+        Text(
+            text = stringResource(Res.string.{{screen_name}}_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+
+        Spacer(Modifier.height(AppTheme.spacing.lg))
+
+        if (uiState.isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(AppTheme.sizing.iconLg),
+            )
+            Spacer(Modifier.height(AppTheme.spacing.lg))
+        }
+
+        uiState.errorMessage?.let { error ->
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(AppTheme.spacing.sm))
+        }
+
+        // TODO: Add screen-specific content here
+
+        Spacer(Modifier.height(AppTheme.spacing.lg))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            AppPrimaryButton(
+                text = stringResource(Res.string.action_refresh),
+                onClick = onRefresh,
+                enabled = !uiState.isLoading,
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun {{ScreenName}}ScreenPreview() {
+    AppTheme {
+        {{ScreenName}}ScreenContent(
+            uiState = {{ScreenName}}UiState(),
+            onRefresh = {},
+        )
+    }
+}

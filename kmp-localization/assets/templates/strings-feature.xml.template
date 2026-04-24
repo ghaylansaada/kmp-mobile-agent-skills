@@ -1,0 +1,79 @@
+<!-- =========================================================================
+     Feature String Resource Template
+     Location: composeApp/src/commonMain/composeResources/values/
+
+     Usage: Copy this file to the values/ directory and rename it to
+     strings_{{feature_name}}.xml. Replace {{...}} placeholders.
+     Create matching files in each locale directory
+     (e.g., values-ar/strings_{{feature_name}}.xml).
+
+     Naming convention: prefix all keys with {{feature_name}}_ to avoid
+     collisions with strings from other features.
+     ========================================================================= -->
+
+<resources>
+    <!-- ===================================================================
+         {{FEATURE_NAME}} Feature Strings
+         =================================================================== -->
+
+    <!-- Screen titles -->
+    <string name="{{feature}}_title">{{Feature Title}}</string>
+    <string name="{{feature}}_subtitle">{{Feature Subtitle}}</string>
+
+    <!-- Labels -->
+    <string name="{{feature}}_label_name">Name</string>
+    <string name="{{feature}}_label_email">Email</string>
+    <string name="{{feature}}_label_description">Description</string>
+
+    <!-- Actions -->
+    <string name="{{feature}}_action_submit">Submit</string>
+    <string name="{{feature}}_action_cancel">Cancel</string>
+
+    <!-- Messages -->
+    <string name="{{feature}}_message_success">Successfully completed!</string>
+    <string name="{{feature}}_message_empty">No items found.</string>
+
+    <!-- Strings with arguments (%1$s = string, %1$d = integer) -->
+    <string name="{{feature}}_greeting">Welcome, %1$s!</string>
+    <string name="{{feature}}_count_label">%1$d items</string>
+    <string name="{{feature}}_last_updated">Last updated: %1$s</string>
+
+    <!-- Plurals (add to plurals.xml or plurals_{{feature}}.xml) -->
+    <!--
+    <plurals name="{{feature}}_items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    -->
+
+    <!-- Feature-specific errors -->
+    <string name="{{feature}}_error_validation">Please fill in all required fields.</string>
+    <string name="{{feature}}_error_duplicate">This item already exists.</string>
+</resources>
+
+<!-- =========================================================================
+     Localized version template (e.g., values-ar/strings_{{feature_name}}.xml)
+     ========================================================================= -->
+<!--
+<resources>
+    <string name="{{feature}}_title">{{localized title}}</string>
+    <string name="{{feature}}_subtitle">{{localized subtitle}}</string>
+
+    <string name="{{feature}}_label_name">الاسم</string>
+    <string name="{{feature}}_label_email">البريد الإلكتروني</string>
+    <string name="{{feature}}_label_description">الوصف</string>
+
+    <string name="{{feature}}_action_submit">إرسال</string>
+    <string name="{{feature}}_action_cancel">إلغاء</string>
+
+    <string name="{{feature}}_message_success">تمت العملية بنجاح!</string>
+    <string name="{{feature}}_message_empty">لا توجد عناصر.</string>
+
+    <string name="{{feature}}_greeting">مرحبًا، %1$s!</string>
+    <string name="{{feature}}_count_label">%1$d عنصر</string>
+    <string name="{{feature}}_last_updated">آخر تحديث: %1$s</string>
+
+    <string name="{{feature}}_error_validation">يرجى ملء جميع الحقول المطلوبة.</string>
+    <string name="{{feature}}_error_duplicate">هذا العنصر موجود بالفعل.</string>
+</resources>
+-->

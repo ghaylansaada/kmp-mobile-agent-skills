@@ -1,0 +1,199 @@
+// New Feature Template: {{FEATURE_NAME}}
+// Replace: {{FEATURE_NAME}} (PascalCase), {{feature_name}} (camelCase),
+//          {{ENTITY_NAME}} (e.g. ProductEntity), {{SERVICE_NAME}} (e.g. ProductService)
+
+// --- FILE: presentation/{{feature_name}}/{{FEATURE_NAME}}UiState.kt ---
+package com.example.app.presentation.{{feature_name}}
+
+import com.example.app.data.local.entity.{{ENTITY_NAME}}
+
+sealed interface {{FEATURE_NAME}}UiState {
+    data object Loading : {{FEATURE_NAME}}UiState
+    data class Success(
+        val {{feature_name}}: {{ENTITY_NAME}}? = null,
+        val items: List<{{ENTITY_NAME}}> = emptyList(),
+        val isRefreshing: Boolean = false,
+    ) : {{FEATURE_NAME}}UiState
+    data class Error(
+        val statusCode: Int,
+        val message: String? = null,
+    ) : {{FEATURE_NAME}}UiState
+}
+
+// --- FILE: presentation/{{feature_name}}/{{FEATURE_NAME}}UiEvent.kt ---
+package com.example.app.presentation.{{feature_name}}
+
+sealed interface {{FEATURE_NAME}}UiEvent {
+    data object Refresh : {{FEATURE_NAME}}UiEvent
+    data object Retry : {{FEATURE_NAME}}UiEvent
+}
+
+// --- FILE: data/repository/{{FEATURE_NAME}}Repository.kt ---
+package com.example.app.data.repository
+
+import com.example.app.data.local.entity.{{ENTITY_NAME}}
+import com.example.app.data.remote.util.ApiResult
+import kotlinx.coroutines.flow.Flow
+
+interface {{FEATURE_NAME}}Repository {
+    fun observe{{FEATURE_NAME}}(): Flow<{{ENTITY_NAME}}?>
+    suspend fun callApi(): ApiResult<List<{{ENTITY_NAME}}>>
+}
+
+// --- FILE: data/repository/{{FEATURE_NAME}}RepositoryImpl.kt ---
+package com.example.app.data.repository
+
+import com.example.app.data.local.AppDatabase
+import com.example.app.data.local.entity.{{ENTITY_NAME}}
+import com.example.app.data.remote.service.{{SERVICE_NAME}}
+import com.example.app.data.remote.util.ApiCall
+import com.example.app.data.remote.util.ApiResult
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onStart
+
+class {{FEATURE_NAME}}RepositoryImpl(
+    private val {{feature_name}}Service: {{SERVICE_NAME}},
+    private val database: AppDatabase,
+) : {{FEATURE_NAME}}Repository {
+
+    override fun observe{{FEATURE_NAME}}(): Flow<{{ENTITY_NAME}}?> =
+        database.{{feature_name}}Dao.select{{FEATURE_NAME}}()
+            .onStart { callApi() }
+
+    override suspend fun callApi(): ApiResult<List<{{ENTITY_NAME}}>> {
+        return object : ApiCall<List<{{ENTITY_NAME}}>>() {
+            override suspend fun webserviceCall() =
+                {{feature_name}}Service.get{{FEATURE_NAME}}s()
+            override suspend fun onSuccess(data: List<{{ENTITY_NAME}}>) {
+                database.{{feature_name}}Dao.insertAll(data)
+            }
+            override suspend fun onFailure(statusCode: Int, message: String?) { }
+        }.execute()
+    }
+}
+
+// --- FILE: presentation/{{feature_name}}/{{FEATURE_NAME}}ViewModel.kt ---
+
+package com.example.app.presentation.{{feature_name}}
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.app.data.repository.{{FEATURE_NAME}}Repository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+class {{FEATURE_NAME}}ViewModel(
+    private val {{feature_name}}Repository: {{FEATURE_NAME}}Repository,
+) : ViewModel() {
+
+    private val _uiState =
+        MutableStateFlow<{{FEATURE_NAME}}UiState>({{FEATURE_NAME}}UiState.Loading)
+    val uiState: StateFlow<{{FEATURE_NAME}}UiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            {{feature_name}}Repository.observe{{FEATURE_NAME}}().collect { entity ->
+                _uiState.update {
+                    {{FEATURE_NAME}}UiState.Success({{feature_name}} = entity)
+                }
+            }
+        }
+    }
+
+    fun onEvent(event: {{FEATURE_NAME}}UiEvent) {
+        when (event) {
+            {{FEATURE_NAME}}UiEvent.Refresh -> refresh()
+            {{FEATURE_NAME}}UiEvent.Retry -> refresh()
+        }
+    }
+
+    private fun refresh() {
+        viewModelScope.launch {
+            _uiState.update {
+                when (it) {
+                    is {{FEATURE_NAME}}UiState.Success ->
+                        it.copy(isRefreshing = true)
+                    else -> {{FEATURE_NAME}}UiState.Loading
+                }
+            }
+            val result = {{feature_name}}Repository.callApi()
+            if (!result.isSuccess) {
+                _uiState.update {
+                    {{FEATURE_NAME}}UiState.Error(
+                        statusCode = result.statusCode ?: 0,
+                        message = result.message,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// --- FILE: presentation/{{feature_name}}/{{FEATURE_NAME}}Screen.kt ---
+
+package com.example.app.presentation.{{feature_name}}
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import com.example.app.ui.theme.AppTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
+
+@Composable
+fun {{FEATURE_NAME}}Screen(
+    viewModel: {{FEATURE_NAME}}ViewModel = koinViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    when (val state = uiState) {
+        is {{FEATURE_NAME}}UiState.Loading -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        is {{FEATURE_NAME}}UiState.Success -> {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(AppTheme.spacing.lg),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                state.{{feature_name}}?.let { Text(it.toString()) }
+            }
+        }
+        is {{FEATURE_NAME}}UiState.Error -> {
+            Text(stringResource(Res.string.error_with_code, state.statusCode, state.message.orEmpty()))
+        }
+    }
+}
+
+// --- FILE: di/{{FEATURE_NAME}}Module.kt ---
+
+package com.example.app.di
+
+import com.example.app.data.repository.{{FEATURE_NAME}}Repository
+import com.example.app.data.repository.{{FEATURE_NAME}}RepositoryImpl
+import com.example.app.presentation.{{feature_name}}.{{FEATURE_NAME}}ViewModel
+import org.koin.core.module.dsl.viewModel
+import org.koin.dsl.module
+
+fun {{feature_name}}Module() = module {
+    single<{{FEATURE_NAME}}Repository> {
+        {{FEATURE_NAME}}RepositoryImpl(
+            {{feature_name}}Service = get(),
+            database = get(),
+        )
+    }
+    viewModel<{{FEATURE_NAME}}ViewModel> {
+        {{FEATURE_NAME}}ViewModel({{feature_name}}Repository = get())
+    }
+}

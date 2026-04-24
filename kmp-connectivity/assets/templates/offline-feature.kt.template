@@ -1,0 +1,109 @@
+// ============================================================================
+// Template: Offline-Capable Feature
+// Usage: Replace {{FEATURE}} with your feature name (e.g., "Todo", "Note")
+//        Replace {{feature_lower}} with lowercase (e.g., "todo", "note")
+//        Replace {{feature_snake}} with snake_case (e.g., "todo", "note")
+// ============================================================================
+
+// --- commonMain: ViewModel with connectivity awareness ---
+// File: presentation/{{feature_lower}}/{{FEATURE}}ViewModel.kt
+
+package {your.package}.presentation.{{feature_lower}}
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import {your.package}.core.connectivity.ConnectivityObserver
+import {your.package}.core.connectivity.ConnectivityStatus
+import {your.package}.core.connectivity.OfflineRequestQueue
+import {your.package}.core.connectivity.PendingRequest
+import {your.package}.core.connectivity.System
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+data class {{FEATURE}}UiState(
+    val items: List<String> = emptyList(), // Replace with your domain model
+    val isOnline: Boolean = true,
+    val pendingCount: Int = 0,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+)
+
+class {{FEATURE}}ViewModel(
+    private val connectivityObserver: ConnectivityObserver,
+    private val requestQueue: OfflineRequestQueue,
+    // private val {{feature_lower}}Repository: {{FEATURE}}Repository,
+) : ViewModel() {
+
+    private val _items = MutableStateFlow<List<String>>(emptyList())
+    private val _isLoading = MutableStateFlow(false)
+    private val _error = MutableStateFlow<String?>(null)
+
+    val state: StateFlow<{{FEATURE}}UiState> = combine(
+        _items,
+        connectivityObserver.observe(),
+        requestQueue.pendingCount,
+        _isLoading,
+        _error,
+    ) { items, connectivity, pending, loading, error ->
+        {{FEATURE}}UiState(
+            items = items,
+            isOnline = connectivity is ConnectivityStatus.Available,
+            pendingCount = pending,
+            isLoading = loading,
+            errorMessage = error,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = {{FEATURE}}UiState(),
+    )
+
+    fun create{{FEATURE}}(name: String) {
+        viewModelScope.launch {
+            if (connectivityObserver.isConnected()) {
+                // Online: call API directly
+                _isLoading.value = true
+                try {
+                    // val result = {{feature_lower}}Repository.create(name)
+                    // _items.value = _items.value + result
+                    _error.value = null
+                } catch (e: Exception) {
+                    enqueueCreate(name)
+                    _error.value = "Saved offline. Will sync when connected."
+                } finally {
+                    _isLoading.value = false
+                }
+            } else {
+                // Offline: queue for later
+                enqueueCreate(name)
+                _error.value = "Saved offline. Will sync when connected."
+            }
+        }
+    }
+
+    private suspend fun enqueueCreate(name: String) {
+        requestQueue.enqueue(
+            PendingRequest(
+                id = "create_{{feature_snake}}_${name.hashCode()}",
+                operationType = "create_{{feature_snake}}",
+                payload = name,
+                createdAt = System.currentTimeMillis(),
+            ),
+        )
+    }
+}
+
+// --- Koin DI ---
+//
+// fun {{feature_lower}}Module() = module {
+//     viewModel<{{FEATURE}}ViewModel> {
+//         {{FEATURE}}ViewModel(
+//             connectivityObserver = get(),
+//             requestQueue = get(),
+//         )
+//     }
+// }

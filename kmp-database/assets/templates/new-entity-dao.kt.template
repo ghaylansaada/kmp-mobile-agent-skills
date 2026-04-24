@@ -1,0 +1,90 @@
+// Template: New Entity + DAO Pair
+//
+// Usage:
+//   1. Replace {{EntityName}} with your entity class name (e.g., PostEntity)
+//   2. Replace {{tableName}} with your table name (e.g., posts)
+//   3. Replace {{primaryKeyType}} with the primary key type (e.g., String, Int, Long)
+//   4. Replace {{DaoName}} with your DAO interface name (e.g., PostDao)
+//   5. Add entity fields as needed
+//   6. Add DAO query methods as needed
+//   7. Register the entity in AppDatabase @Database(entities = [...])
+//   8. Add an abstract val for the DAO in AppDatabase
+//   9. Bump the database version and add a migration spec
+
+// --- Entity: commonMain/kotlin/{your.package}/data/local/entity/{{EntityName}}.kt ---
+
+package {your.package}.data.local.entity
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "{{tableName}}")
+data class {{EntityName}}(
+    @PrimaryKey
+    val id: {{primaryKeyType}},
+    // TODO: Add entity fields
+    // val name: String,
+    // val createdAt: Instant,    // Requires AppDatabaseConverters
+    // val description: String?,
+)
+// --- DAO: commonMain/kotlin/{your.package}/data/local/dao/{{DaoName}}.kt ---
+
+package {your.package}.data.local.dao
+
+import androidx.room.Dao
+import androidx.room.Query
+import androidx.room.Upsert
+import {your.package}.data.local.entity.{{EntityName}}
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface {{DaoName}} {
+
+    @Query("SELECT * FROM {{tableName}} WHERE id = :id")
+    fun selectById(id: {{primaryKeyType}}): Flow<{{EntityName}}?>
+
+    @Query("SELECT * FROM {{tableName}} ORDER BY id ASC")
+    fun selectAll(): Flow<List<{{EntityName}}>>
+
+    @Upsert
+    suspend fun upsertAll(entities: List<{{EntityName}}>)
+
+    @Query("DELETE FROM {{tableName}}")
+    suspend fun clear()
+
+    @Query("DELETE FROM {{tableName}} WHERE id = :id")
+    suspend fun deleteById(id: {{primaryKeyType}})
+}
+
+// --- Register in AppDatabase ---
+//
+// 1. Add to @Database entities:
+//    @Database(
+//        version = N,  // Bump version!
+//        exportSchema = true,
+//        entities = [
+//            ...,
+//            {{EntityName}}::class,
+//        ])
+//
+// 2. Add abstract DAO property:
+//    abstract val {{daoPropertyName}}: {{DaoName}}
+//
+// 3. Add migration spec in AppDatabaseMigrations:
+//    class FromXToY : AutoMigrationSpec
+//
+// 4. Add AutoMigration to @Database:
+//    autoMigrations = [
+//        AutoMigration(from = X, to = Y, spec = AppDatabaseMigrations.FromXToY::class),
+//    ]
+
+// --- Optional: Add PagingSource support ---
+//
+// 1. Implement PageableEntity:
+//    data class {{EntityName}}(...) : PageableEntity
+//
+// 2. Add PagingSource to DAO:
+//    @Query("SELECT * FROM {{tableName}} ORDER BY id ASC")
+//    fun pagingSource(): PagingSource<Int, {{EntityName}}>
+//
+// 3. Import: import androidx.paging.PagingSource

@@ -1,0 +1,29 @@
+package {your.package}.{{package_path}}
+
+import co.touchlab.kermit.Logger
+import {your.package}.core.logging.AppLogger
+
+class {{CLASS_NAME}}(
+    // ... constructor parameters ...
+) {
+    private val logger: Logger = AppLogger.withTag("{{TAG}}")
+
+    // logger.v { "Entering method with param=$param" }
+    // logger.d { "Loaded ${items.size} items from cache" }
+    // logger.i { "User logged in: userId=$userId" }
+    // logger.w { "Retry attempt ${attempt}/${maxRetries}" }
+    // logger.e(exception) { "Failed to parse response" }
+}
+
+// ViewModel variant:
+//
+// class {{ViewModel}}(private val repository: {{Repository}}) : ViewModel() {
+//     private val logger: Logger = AppLogger.withTag("{{ViewModel}}")
+//     fun load() {
+//         logger.d { "Loading data..." }
+//         viewModelScope.launch {
+//             try { val result = repository.getData(); logger.i { "Loaded ${result.size} items" } }
+//             catch (e: Exception) { logger.e(e) { "Failed to load" } }
+//         }
+//     }
+// }

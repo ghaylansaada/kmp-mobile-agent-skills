@@ -1,0 +1,78 @@
+import XCTest
+@testable import ComposeApp
+
+/// GOTCHA: This file will not compile until the KMP shared framework is
+/// built for the simulator architecture. Run:
+///   ./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64
+///
+/// GOTCHA: XCTAssertEqual(a, b, "msg") puts the message as the THIRD
+/// parameter. kotlin.test.assertEquals(expected, actual, message) uses
+/// different parameter ordering. Don't confuse them.
+
+final class {{TestClassName}}: XCTestCase {
+
+    // MARK: - Properties
+
+    // private var subject: YourClass!
+
+    // MARK: - Setup / Teardown
+
+    override func setUp() {
+        super.setUp()
+        // TODO: Initialize subject
+        // GOTCHA: @BeforeClass does not exist in kotlin.test.
+        // setUp() runs per-method, not per-class.
+    }
+
+    override func tearDown() {
+        // subject = nil
+        super.tearDown()
+    }
+
+    // MARK: - Synchronous Tests
+
+    func testInitialState() {
+        // TODO: Assert initial state
+        // XCTAssertNil(subject.currentValue)
+    }
+
+    // MARK: - Async Tests (Kotlin suspend functions)
+
+    func testAsyncOperation() async throws {
+        // TODO: Call async Kotlin function
+        // let result = try await subject.fetchData()
+        // XCTAssertFalse(result.isEmpty)
+        //
+        // GOTCHA: If this hangs, the Kotlin suspend function may be
+        // re-dispatching to Dispatchers.Main while Main is blocked
+        // by this test method.
+    }
+
+    func testAsyncErrorHandling() async {
+        do {
+            // TODO: Call function that should throw
+            // _ = try await subject.failingOperation()
+            XCTFail("Expected error to be thrown")
+        } catch {
+            XCTAssertNotNil(error)
+        }
+    }
+
+    // MARK: - Flow Collection Tests
+
+    func testFlowEmitsValues() {
+        let expectation = XCTestExpectation(description: "Flow emits")
+
+        // TODO: Set up flow collection
+        // GOTCHA: Attach collector BEFORE triggering emission
+        // let wrapper = FlowWrapper(flow: subject.dataFlow)
+        // wrapper.collect(onEach: { value in
+        //     XCTAssertNotNil(value)
+        //     expectation.fulfill()
+        // })
+        // subject.triggerEmission()
+
+        wait(for: [expectation], timeout: 5.0)
+        // wrapper.cancel()  // Always cancel to prevent leaks
+    }
+}

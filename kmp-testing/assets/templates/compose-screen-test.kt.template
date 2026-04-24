@@ -1,0 +1,72 @@
+package {your.package}.ui
+
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import kotlin.test.assertTrue
+
+/**
+ * GOTCHA: @RunWith(RobolectricTestRunner::class) is REQUIRED.
+ * Without it, createComposeRule() throws "No Activity found"
+ * because there is no Android environment to host the composable.
+ *
+ * Use createComposeRule() (headless) by default.
+ * Only use createAndroidComposeRule<Activity>() when the test
+ * needs activity-level lifecycle callbacks.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+class {{ScreenName}}Test {
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    @Test
+    fun displaysLoadingState() {
+        composeTestRule.setContent {
+            // TODO: Render screen with loading state
+            // {{ScreenName}}(uiState = {{UiState}}(isLoading = true))
+        }
+
+        composeTestRule.onNodeWithTag("loading_indicator").assertIsDisplayed()
+    }
+
+    @Test
+    fun displaysContentWhenLoaded() {
+        composeTestRule.setContent {
+            // TODO: Render screen with data
+        }
+
+        // TODO: Assert content is visible
+        composeTestRule.onNodeWithText("Expected Text").assertIsDisplayed()
+    }
+
+    @Test
+    fun displaysErrorState() {
+        composeTestRule.setContent {
+            // TODO: Render screen with error
+        }
+
+        composeTestRule.onNodeWithTag("error_message").assertIsDisplayed()
+    }
+
+    @Test
+    fun buttonClickTriggersAction() {
+        var clicked = false
+        composeTestRule.setContent {
+            // TODO: Render screen with click handler
+            // onClick = { clicked = true }
+        }
+
+        composeTestRule.onNodeWithTag("action_button").performClick()
+
+        assertTrue(clicked)
+    }
+}

@@ -1,0 +1,40 @@
+package {your.package}.fakes
+
+import {your.package}.network.ApiResult
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+/**
+ * Fake implementation of {{RepositoryInterface}} for testing.
+ *
+ * Configure return values via public properties before calling the
+ * method under test. Check interaction flags (e.g., `deleteCalled`)
+ * to verify side effects.
+ *
+ * IMPORTANT: Do NOT use MockK or Mockito in commonTest — they depend
+ * on JVM bytecode manipulation and throw ClassNotFoundException on iOS.
+ * Use hand-written fakes like this one instead.
+ */
+class Fake{{RepositoryName}} : {{RepositoryInterface}} {
+
+    private val _items = MutableStateFlow<List<{{EntityType}}>>(emptyList())
+
+    var fetchResult: ApiResult<List<{{EntityType}}>> = ApiResult.Success(emptyList())
+    var getByIdResult: ApiResult<{{EntityType}}>? = null
+
+    fun emitItems(items: List<{{EntityType}}>) {
+        _items.value = items
+    }
+
+    override fun observe(): Flow<List<{{EntityType}}>> = _items.asStateFlow()
+
+    override suspend fun fetchAll(): ApiResult<List<{{EntityType}}>> = fetchResult
+
+    override suspend fun getById(id: String): ApiResult<{{EntityType}}> {
+        return getByIdResult ?: ApiResult.Error(
+            code = 404,
+            message = "Not configured in fake"
+        )
+    }
+}

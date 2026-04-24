@@ -1,0 +1,120 @@
+package {your.package}.domain.error
+
+import {your.package}.core.network.result.ApiResult
+
+/**
+ * Domain-specific error hierarchy for the {{FEATURE_NAME}} feature.
+ *
+ * Maps [ApiResult.Error] into domain-meaningful error types that the
+ * presentation layer can consume without depending on network types.
+ *
+ * Usage:
+ *   val domainError = {{Feature}}Error.from(apiResultError)
+ *   when (domainError) {
+ *       is {{Feature}}Error.NotFound -> showNotFoundUI()
+ *       is {{Feature}}Error.ValidationFailed -> showFieldErrors(domainError.fieldErrors)
+ *       is {{Feature}}Error.Unauthorized -> navigateToLogin()
+ *       is {{Feature}}Error.NoConnection -> showOfflineBanner()
+ *       is {{Feature}}Error.Unknown -> showGenericError(domainError.message)
+ *   }
+ */
+sealed interface {{Feature}}Error {
+
+    val message: String
+    val cause: Throwable?
+
+    data class NotFound(
+        override val message: String = "{{Entity}} not found.",
+        override val cause: Throwable? = null,
+    ) : {{Feature}}Error
+
+    data class Unauthorized(
+        override val message: String = "Your session has expired. Please log in again.",
+        override val cause: Throwable? = null,
+    ) : {{Feature}}Error
+
+    data class Forbidden(
+        override val message: String = "You do not have permission to perform this action.",
+        override val cause: Throwable? = null,
+    ) : {{Feature}}Error
+
+    data class ValidationFailed(
+        val fieldErrors: Map<String, String>,
+        override val message: String = "Please correct the errors below.",
+        override val cause: Throwable? = null,
+    ) : {{Feature}}Error
+
+    data class Conflict(
+        override val message: String = "A conflict occurred. The resource may already exist.",
+        override val cause: Throwable? = null,
+    ) : {{Feature}}Error
+
+    data class RateLimited(
+        override val message: String = "Too many requests. Please try again later.",
+        override val cause: Throwable? = null,
+    ) : {{Feature}}Error
+
+    data class NoConnection(
+        override val cause: Throwable? = null,
+        override val message: String = "No internet connection. Please check your network.",
+    ) : {{Feature}}Error
+
+    data class ServerError(
+        val statusCode: Int,
+        override val message: String = "Server error. Please try again later.",
+        override val cause: Throwable? = null,
+    ) : {{Feature}}Error
+
+    data class ParseError(
+        override val cause: Throwable? = null,
+        override val message: String = "Unable to process the server response.",
+    ) : {{Feature}}Error
+
+    data class Unknown(
+        override val cause: Throwable? = null,
+        override val message: String = "An unexpected error occurred.",
+    ) : {{Feature}}Error
+
+    companion object {
+
+        fun from(error: ApiResult.Error): {{Feature}}Error = when (error) {
+            is ApiResult.Error.InternetError -> NoConnection(cause = error.exception)
+            is ApiResult.Error.ParsingError -> ParseError(cause = error.exception)
+            is ApiResult.Error.HttpError -> when (error.status.value) {
+                401 -> Unauthorized()
+                403 -> Forbidden()
+                404 -> NotFound()
+                409 -> Conflict(message = error.message ?: "A conflict occurred.")
+                422 -> ValidationFailed(
+                    fieldErrors = error.errors
+                        ?.filter { it.path != null && it.message != null }
+                        ?.associate { it.path!! to it.message!! }
+                        ?: emptyMap(),
+                )
+                429 -> RateLimited()
+                in 500..599 -> ServerError(statusCode = error.status.value)
+                else -> Unknown(
+                    cause = error.exception,
+                    message = error.message ?: "An unexpected error occurred (${error.status.value}).",
+                )
+            }
+            is ApiResult.Error.UnknownError -> Unknown(cause = error.exception)
+        }
+    }
+}
+
+val {{Feature}}Error.isRetryable: Boolean
+    get() = when (this) {
+        is {{Feature}}Error.NoConnection,
+        is {{Feature}}Error.ServerError,
+        is {{Feature}}Error.RateLimited,
+        is {{Feature}}Error.Unknown,
+        -> true
+        is {{Feature}}Error.NotFound,
+        is {{Feature}}Error.Unauthorized,
+        is {{Feature}}Error.Forbidden,
+        is {{Feature}}Error.ValidationFailed,
+        is {{Feature}}Error.Conflict,
+        is {{Feature}}Error.ParseError,
+        -> false
+    }

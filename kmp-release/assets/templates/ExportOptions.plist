@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ExportOptions.plist for App Store submission.
+  Place at: iosApp/ExportOptions.plist
+
+  For ad-hoc distribution (Firebase App Distribution), change:
+    method -> ad-hoc
+    provisioningProfiles value -> your ad-hoc profile name
+
+  Replace YOUR_TEAM_ID with your Apple Developer Team ID.
+  Replace {your.package} with your bundle identifier.
+
+  GOTCHA: uploadBitcode must be false. Bitcode is deprecated since Xcode 14
+  and App Store Connect rejects submissions with Bitcode enabled.
+
+  GOTCHA: uploadSymbols should be true so dSYMs are available for crash
+  symbolication. If false, you must upload dSYMs manually.
+-->
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+    <key>teamID</key>
+    <string>YOUR_TEAM_ID</string>
+    <key>uploadBitcode</key>
+    <false/>
+    <key>uploadSymbols</key>
+    <true/>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>{your.package}</key>
+        <string>{your.package} AppStore</string>
+    </dict>
+    <key>signingCertificate</key>
+    <string>Apple Distribution</string>
+</dict>
+</plist>

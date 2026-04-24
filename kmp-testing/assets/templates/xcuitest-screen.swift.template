@@ -1,0 +1,74 @@
+import XCTest
+
+/// GOTCHA: XCUITests run the full app — they cannot mock dependencies.
+/// Use launch arguments (e.g., "--uitesting") to configure the app
+/// for test mode.
+///
+/// GOTCHA: Use waitForExistence(timeout:) instead of Thread.sleep().
+/// Thread.sleep blocks the test thread and wastes time on fast simulators
+/// while being too short on slow CI runners.
+
+final class {{ScreenName}}UITests: XCTestCase {
+
+    private var app: XCUIApplication!
+
+    override func setUp() {
+        super.setUp()
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launchArguments.append("--uitesting")
+        app.launch()
+    }
+
+    override func tearDown() {
+        app = nil
+        super.tearDown()
+    }
+
+    // MARK: - Screen State Tests
+
+    func testScreenLoadsSuccessfully() {
+        // TODO: Wait for main content to appear
+        let mainContent = app.scrollViews["{{screen_tag}}_content"]
+        XCTAssertTrue(
+            mainContent.waitForExistence(timeout: 10),
+            "{{ScreenName}} should load within timeout"
+        )
+    }
+
+    func testLoadingStateAppears() {
+        let spinner = app.activityIndicators["loading_indicator"]
+        if spinner.exists {
+            let disappeared = spinner.waitForNonExistence(timeout: 10)
+            XCTAssertTrue(disappeared, "Loading indicator should eventually disappear")
+        }
+    }
+
+    // MARK: - Interaction Tests
+
+    func testButtonTapTriggersAction() {
+        let button = app.buttons["{{action_button_tag}}"]
+        guard button.waitForExistence(timeout: 10) else {
+            XCTFail("Button not found")
+            return
+        }
+
+        button.tap()
+
+        // TODO: Assert the result of the tap
+        // GOTCHA: Accessibility identifiers in Compose are set via
+        // Modifier.testTag("my_tag"), NOT Modifier.semantics { }
+        // let result = app.staticTexts["result_label"]
+        // XCTAssertTrue(result.waitForExistence(timeout: 5))
+    }
+
+    // MARK: - Navigation Tests
+
+    func testNavigatesToDetail() {
+        // TODO: Tap on list item and verify detail screen
+        // let firstItem = app.cells.firstMatch
+        // firstItem.tap()
+        // let detailTitle = app.navigationBars["Detail"]
+        // XCTAssertTrue(detailTitle.waitForExistence(timeout: 5))
+    }
+}

@@ -1,0 +1,64 @@
+package {your.package}.core.{{ MODULE_NAME }}
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
+
+/**
+ * {{ CLASS_DOC }}
+ *
+ * Uses a [SupervisorJob] so that failure in one child coroutine does not
+ * cancel sibling coroutines. The scope must be explicitly cancelled when
+ * the owning component is destroyed.
+ */
+class {{ CLASS_NAME }}(
+    parentScope: CoroutineScope? = null,
+) {
+
+    private val supervisorJob: Job = if (parentScope != null) {
+        SupervisorJob(parentScope.coroutineContext[Job])
+    } else {
+        SupervisorJob()
+    }
+
+    private val scope: CoroutineScope = CoroutineScope(
+        Dispatchers.IO + supervisorJob
+    )
+
+    private val _state = MutableStateFlow<{{ STATE_TYPE }}>({{ INITIAL_STATE }})
+    val state: StateFlow<{{ STATE_TYPE }}> = _state.asStateFlow()
+
+    fun performOperation() {
+        scope.launch {
+            _state.value = {{ LOADING_STATE }}
+            try {
+                val result = {{ SUSPEND_CALL }}
+                _state.value = {{ SUCCESS_STATE }}
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = {{ ERROR_STATE }}
+            }
+        }
+    }
+
+    fun close() {
+        scope.cancel()
+    }
+}
+
+// -- Koin DI registration --
+//
+// fun {{ MODULE_FUNCTION }}() = module {
+//     single<{{ CLASS_NAME }}> {
+//         {{ CLASS_NAME }}()
+//     }
+// }

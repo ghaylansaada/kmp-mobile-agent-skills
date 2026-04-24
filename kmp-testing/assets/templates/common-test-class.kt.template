@@ -1,0 +1,68 @@
+package {your.package}.{{package_suffix}}
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class {{TestClassName}} {
+
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    // TODO: Declare fakes and subject-under-test
+    // private val fakeRepository = FakeAccountRepository()
+    // private lateinit var subject: YourClass
+
+    @BeforeTest
+    fun setUp() {
+        // CRITICAL: setMain MUST happen BEFORE creating any ViewModel
+        // that launches coroutines in init{}
+        Dispatchers.setMain(testDispatcher)
+        // TODO: Initialize subject with fakes
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun initialStateIsCorrect() = runTest {
+        // TODO: Assert initial state
+        assertTrue(true, "Replace with real assertion")
+    }
+
+    @Test
+    fun actionProducesExpectedStateChange() = runTest {
+        // Arrange
+        // TODO: Configure fakes
+
+        // Act
+        // TODO: Trigger action
+
+        // Assert
+        // TODO: Verify result
+    }
+
+    @Test
+    fun errorCaseIsHandledGracefully() = runTest {
+        // Arrange
+        // TODO: Configure fake to return error
+
+        // Act
+        // TODO: Trigger action
+
+        // Assert
+        // TODO: Verify error handling
+    }
+}

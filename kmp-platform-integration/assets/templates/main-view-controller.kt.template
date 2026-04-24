@@ -1,0 +1,16 @@
+// Template: MainViewController for KMP iOS Integration
+// File: composeApp/src/iosMain/kotlin/{your/package}/MainViewController.kt
+// For Swift hosting setup, see references/entry-points.md
+
+package {your.package}
+
+import androidx.compose.ui.window.ComposeUIViewController
+import {your.package}.core.config.PlatformConfig
+import {your.package}.core.platform.Platform
+import {your.package}.core.platform.PlatformContext
+import {your.package}.di.initKoin
+
+fun MainViewController() = ComposeUIViewController {
+    initKoin(context = PlatformContext(), config = PlatformConfig(Platform.OsType.IOS))
+    App()
+}

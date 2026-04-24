@@ -1,0 +1,89 @@
+// Template: New Permission-Gated Feature Screen
+// Usage: Replace {{FeatureName}}, {{permissionType}}, and {{description}} with your values.
+//
+// File: composeApp/src/commonMain/kotlin/{your/package}/feature/{{feature_name}}/{{FeatureName}}Screen.kt
+
+package {your.package}.feature.{{feature_name}}
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import {your.package}.ui.theme.AppTheme
+import {your.package}.core.permissions.PermissionManager
+import {your.package}.core.permissions.PermissionRationaleDialog
+import {your.package}.core.permissions.PermissionStatus
+import {your.package}.core.permissions.PermissionType
+import {your.package}.core.permissions.rememberPermissionState
+import mobile.composeapp.generated.resources.Res
+import org.jetbrains.compose.resources.stringResource
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+
+@Composable
+fun {{FeatureName}}Screen(
+    permissionManager: PermissionManager = koinInject(),
+) {
+    val scope = rememberCoroutineScope()
+    val permissionState = rememberPermissionState(
+        type = PermissionType.{{permissionType}}, // CAMERA, LOCATION, or NOTIFICATIONS
+        permissionManager = permissionManager,
+    )
+
+    // In production, replace all hardcoded strings with stringResource(Res.string.*).
+    Column(
+        modifier = Modifier.fillMaxSize().padding(AppTheme.spacing.lg),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        when (permissionState.status) {
+            is PermissionStatus.Granted -> {
+                // Permission granted -- show feature content
+                {{FeatureName}}Content()
+            }
+            is PermissionStatus.NotDetermined,
+            is PermissionStatus.Denied,
+            -> {
+                Text(stringResource(Res.string.{{feature_name}}_permission_rationale)) // "{{description}}"
+                Spacer(modifier = Modifier.height(AppTheme.spacing.lg))
+                Button(onClick = { scope.launch { permissionState.onRequest() } }) {
+                    Text(stringResource(Res.string.action_grant_permission)) // "Grant Permission"
+                }
+            }
+            is PermissionStatus.PermanentlyDenied -> {
+                Text(stringResource(Res.string.permission_permanently_denied))
+                Text(stringResource(Res.string.permission_open_settings_hint))
+                Spacer(modifier = Modifier.height(AppTheme.spacing.lg))
+                Button(onClick = { permissionState.onOpenSettings() }) {
+                    Text(stringResource(Res.string.action_open_settings)) // "Open Settings"
+                }
+            }
+        }
+    }
+
+    if (permissionState.showRationale) {
+        PermissionRationaleDialog(
+            title = stringResource(Res.string.permission_required_title), // "Permission Required"
+            message = stringResource(Res.string.{{feature_name}}_permission_rationale), // "{{description}}"
+            onConfirm = {
+                permissionState.onDismissRationale()
+                scope.launch { permissionState.onRequest() }
+            },
+            onDismiss = { permissionState.onDismissRationale() },
+        )
+    }
+}
+
+@Composable
+private fun {{FeatureName}}Content() {
+    // TODO: Implement the feature UI that requires the permission
+    Text(stringResource(Res.string.{{feature_name}}_active)) // "{{FeatureName}} feature is active!"
+}

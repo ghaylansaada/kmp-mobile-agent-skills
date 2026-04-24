@@ -1,0 +1,92 @@
+// =============================================================================
+// EXPECT/ACTUAL PAIR TEMPLATE
+// =============================================================================
+//
+// Instructions:
+//   1. Replace {{ClassName}} with your class name (e.g., DeviceInfo)
+//   2. Replace {your.package} with your actual package name
+//   3. Replace {{memberSignatures}} with your expect member declarations
+//   4. Copy each section into the corresponding source set file
+//   5. Ensure -Xexpect-actual-classes is set in build.gradle.kts
+//
+
+
+// -- commonMain -----------------------------------------------------------------
+// File: composeApp/src/commonMain/kotlin/{your/package_path}/{{ClassName}}.kt
+
+package {your.package}
+
+expect class {{ClassName}} {
+    // TODO: Add expected member signatures
+    // fun doSomething(): String
+    // suspend fun fetchData(id: String): ByteArray?
+}
+
+
+// -- androidMain ----------------------------------------------------------------
+// File: composeApp/src/androidMain/kotlin/{your/package_path}/{{ClassName}}.kt
+
+package {your.package}
+
+// TODO: Add Android-specific imports
+
+actual class {{ClassName}}(
+    // TODO: Add Android-specific constructor parameters
+) {
+    // TODO: Implement expected members
+    // actual fun doSomething(): String = ...
+    // actual suspend fun fetchData(id: String): ByteArray? =
+    //     withContext(Dispatchers.IO) { ... }
+}
+
+
+// -- iosMain --------------------------------------------------------------------
+// File: composeApp/src/iosMain/kotlin/{your/package_path}/{{ClassName}}.kt
+
+package {your.package}
+
+// TODO: Add iOS-specific imports
+
+actual class {{ClassName}}(
+    // TODO: Add iOS-specific constructor parameters
+) {
+    // TODO: Implement expected members
+    // actual fun doSomething(): String = ...
+    // @OptIn(ExperimentalForeignApi::class)
+    // actual suspend fun fetchData(id: String): ByteArray? =
+    //     withContext(Dispatchers.Default) { ... }
+}
+
+
+// =============================================================================
+// EXPECT FUN TEMPLATE (top-level functions)
+// =============================================================================
+//
+// -- commonMain --
+// expect fun {{functionName}}(): {{ReturnType}}
+//
+// -- androidMain --
+// actual fun {{functionName}}(): {{ReturnType}} = ...
+//
+// -- iosMain --
+// actual fun {{functionName}}(): {{ReturnType}} = ...
+
+
+// =============================================================================
+// EXPECT OBJECT TEMPLATE (singletons)
+// =============================================================================
+//
+// -- commonMain --
+// expect object {{ObjectName}} : {{Interface}} {
+//     override fun initialize(): {{ReturnType}}
+// }
+//
+// -- androidMain --
+// actual object {{ObjectName}} : {{Interface}} {
+//     actual override fun initialize(): {{ReturnType}} = ...
+// }
+//
+// -- iosMain --
+// actual object {{ObjectName}} : {{Interface}} {
+//     actual override fun initialize(): {{ReturnType}} = ...
+// }

@@ -1,0 +1,60 @@
+// ============================================================================
+// Template: New Notification Feature
+// Usage: Replace {{FEATURE}} with your feature name (e.g., "Reminder", "Chat")
+// ============================================================================
+
+// --- commonMain: Notification type definition ---
+// File: core/notifications/{{FEATURE}}Notification.kt
+
+package {your.package}.core.notifications
+
+object {{FEATURE}}Notification {
+
+    val CHANNEL = NotificationChannelDef(
+        id = "{{feature_snake}}_channel",
+        name = "{{FEATURE}} Notifications",
+        description = "Notifications for {{feature_lower}} events",
+        importance = ChannelImportance.DEFAULT,
+    )
+
+    fun create(
+        id: String,
+        title: String,
+        body: String,
+        targetId: String? = null,
+    ): NotificationPayload = NotificationPayload(
+        id = "{{feature_snake}}_$id",
+        title = title,
+        body = body,
+        deepLink = if (targetId != null) {
+            "myapp://{{feature_lower}}/$targetId"
+        } else {
+            null
+        },
+        data = mapOf("type" to "{{feature_snake}}"),
+    )
+}
+
+// --- ViewModel usage ---
+// File: presentation/{{feature_lower}}/{{FEATURE}}ViewModel.kt
+
+package {your.package}.presentation.{{feature_lower}}
+
+import androidx.lifecycle.ViewModel
+import {your.package}.core.notifications.NotificationManager
+import {your.package}.core.notifications.{{FEATURE}}Notification
+
+class {{FEATURE}}ViewModel(
+    private val notificationManager: NotificationManager,
+) : ViewModel() {
+
+    fun notify{{FEATURE}}(id: String, title: String, body: String) {
+        val payload = {{FEATURE}}Notification.create(
+            id = id,
+            title = title,
+            body = body,
+            targetId = id,
+        )
+        notificationManager.showLocal(payload)
+    }
+}

@@ -1,0 +1,46 @@
+package {your.package}.data.remote.service
+
+import {your.package}.core.network.result.ApiResult
+import de.jensklingenberg.ktorfit.http.Body
+import de.jensklingenberg.ktorfit.http.DELETE
+import de.jensklingenberg.ktorfit.http.GET
+import de.jensklingenberg.ktorfit.http.POST
+import de.jensklingenberg.ktorfit.http.PUT
+import de.jensklingenberg.ktorfit.http.Path
+import de.jensklingenberg.ktorfit.http.Query
+
+// TODO: Replace {{EntityName}} with your entity name (e.g., "Product")
+// TODO: Replace {{entityPath}} with the API path (e.g., "products")
+// TODO: Replace {{EntityDto}} with the response DTO class (e.g., "ProductDto")
+// TODO: Register this service in KtorfitModule.kt:
+//       single<{{EntityName}}Service> { get<Ktorfit>().create() }
+
+interface {{EntityName}}Service {
+
+    @GET("{{entityPath}}")
+    suspend fun getAll(
+        @Query("page") page: Int,
+        @Query("limit") limit: Int,
+    ): ApiResult<List<{{EntityDto}}>>
+
+    @GET("{{entityPath}}/{id}")
+    suspend fun getById(
+        @Path("id") id: String,
+    ): ApiResult<{{EntityDto}}>
+
+    @POST("{{entityPath}}")
+    suspend fun create(
+        @Body body: {{CreateRequestDto}},
+    ): ApiResult<{{EntityDto}}>
+
+    @PUT("{{entityPath}}/{id}")
+    suspend fun update(
+        @Path("id") id: String,
+        @Body body: {{UpdateRequestDto}},
+    ): ApiResult<{{EntityDto}}>
+
+    @DELETE("{{entityPath}}/{id}")
+    suspend fun delete(
+        @Path("id") id: String,
+    ): ApiResult<Unit>
+}

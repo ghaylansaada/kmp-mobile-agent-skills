@@ -1,0 +1,75 @@
+// ============================================================================
+// Koin Module Template
+// ============================================================================
+//
+// Usage: Copy this template and replace the placeholders to create a new
+// Koin module. After creating the module, add it to the commonModules()
+// list in CommonModules.kt.
+//
+// Placeholders:
+//   {{MODULE_NAME}}       -- camelCase module name (e.g., paymentModule)
+//   {{INTERFACE_TYPE}}    -- Interface type to bind (e.g., PaymentRepository)
+//   {{IMPL_TYPE}}         -- Implementation class (e.g., PaymentRepositoryImpl)
+//
+// ============================================================================
+
+package {your.package}.di.modules
+
+import {your.package}.data.repository.{{INTERFACE_TYPE}}
+import {your.package}.data.repository.{{IMPL_TYPE}}
+import org.koin.dsl.module
+
+val {{MODULE_NAME}} = module {
+
+    // --- Singleton binding ---
+    // Use single { } for objects that should live for the entire app lifetime.
+    // Examples: repositories, database instances, HTTP clients.
+    single<{{INTERFACE_TYPE}}> {
+        {{IMPL_TYPE}}(
+            // Resolve dependencies from the Koin graph:
+            // dependency1 = get(),
+            // dependency2 = get(),
+        )
+    }
+
+    // --- Factory binding (uncomment if needed) ---
+    // Use factory { } for objects that should be created fresh on every injection.
+    // Examples: use-case classes, request-scoped objects.
+    //
+    // factory<SomeUseCase> {
+    //     SomeUseCaseImpl(
+    //         repository = get(),
+    //     )
+    // }
+
+    // --- Named binding (uncomment if needed) ---
+    // Use named qualifiers when registering multiple instances of the same type.
+    //
+    // single<HttpClient>(named("mySpecialClient")) {
+    //     createSpecialHttpClient(engineFactory = get())
+    // }
+
+    // --- ViewModel binding (uncomment if needed) ---
+    // Use viewModel { } for Compose Multiplatform ViewModels.
+    // Requires: import org.koin.core.module.dsl.viewModel
+    //
+    // viewModel<MyViewModel> {
+    //     MyViewModel(repository = get())
+    // }
+}
+
+// ============================================================================
+// After creating this module, register it in CommonModules.kt:
+//
+// fun commonModules(context: PlatformContext): List<Module> = listOf(
+//     coreModule(context),
+//     localStorageModule,
+//     sessionModule,
+//     ktorfitModule,
+//     externalStorageModule,
+//     imageLoaderModule,
+//     repositoryModule,
+//     viewModelModule,
+//     {{MODULE_NAME}},  // <-- Add here
+// )
+// ============================================================================

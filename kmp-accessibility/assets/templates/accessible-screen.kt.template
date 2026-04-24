@@ -1,0 +1,251 @@
+package {your.package}.presentation.{{feature_name}}
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import mobile.composeapp.generated.resources.Res
+import mobile.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
+import {your.package}.ui.components.buttons.AppPrimaryButton
+import {your.package}.ui.theme.AppTheme
+
+/**
+ * Stateful screen composable -- collects ViewModel state and delegates to content.
+ * Do NOT add @Preview here; koinInject() crashes without Koin initialization.
+ */
+@Composable
+fun {{ScreenName}}Screen(
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: {{ScreenName}}ViewModel = koinInject(),
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    {{ScreenName}}ScreenContent(
+        modifier = modifier,
+        uiState = uiState,
+        onNavigateBack = onNavigateBack,
+        onRefresh = viewModel::refresh,
+        onRetry = viewModel::retry,
+    )
+}
+
+/**
+ * Stateless content composable -- receives state as parameters.
+ * Safe for @Preview because it has no Koin or ViewModel dependencies.
+ *
+ * Accessibility features:
+ * - paneTitle announces screen changes to screen readers
+ * - heading() on section titles enables heading navigation
+ * - liveRegion on status/error text announces changes automatically
+ * - All interactive elements have content descriptions via stringResource
+ * - Loading state announced via progressBarRangeInfo
+ * - Error state announced via semantics { error() }
+ * - Touch targets meet AppTheme.sizing.minTouchTarget minimum
+ * - Content scrollable for dynamic type at largest font sizes
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun {{ScreenName}}ScreenContent(
+    uiState: {{ScreenName}}UiState,
+    onNavigateBack: () -> Unit,
+    onRefresh: () -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val screenTitle = stringResource(Res.string.{{screen_name}}_title)
+
+    Scaffold(
+        modifier = modifier.semantics { paneTitle = screenTitle },
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = screenTitle,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = stringResource(Res.string.cd_navigate_back),
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = onRefresh,
+                        enabled = !uiState.isLoading,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = stringResource(Res.string.cd_action_refresh),
+                        )
+                    }
+                },
+            )
+        },
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+                .padding(AppTheme.spacing.lg),
+        ) {
+            // ── Loading State ────────────────────────────────────────
+            if (uiState.isLoading) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics {
+                            liveRegion = LiveRegionMode.Polite
+                        }
+                        .padding(vertical = AppTheme.spacing.md),
+                    horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.md),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(AppTheme.sizing.iconMd)
+                            .semantics {
+                                progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
+                                contentDescription = stringResource(Res.string.cd_loading)
+                            },
+                    )
+                    Text(
+                        text = stringResource(Res.string.{{screen_name}}_loading),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+
+            // ── Error State ──────────────────────────────────────────
+            uiState.errorMessage?.let { errorText ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics {
+                            liveRegion = LiveRegionMode.Assertive
+                            error(errorText)
+                        }
+                        .padding(vertical = AppTheme.spacing.md),
+                    horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null, // error text provides the info
+                        modifier = Modifier.size(AppTheme.sizing.iconMd),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                    Text(
+                        text = errorText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(AppTheme.spacing.sm))
+                AppPrimaryButton(
+                    text = stringResource(Res.string.action_retry),
+                    onClick = onRetry,
+                    accessibilityLabel = stringResource(Res.string.cd_action_retry),
+                )
+                Spacer(Modifier.height(AppTheme.spacing.lg))
+            }
+
+            // ── Section 1 ────────────────────────────────────────────
+            Text(
+                text = stringResource(Res.string.{{screen_name}}_section_one_title),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.semantics { heading() },
+            )
+            Spacer(Modifier.height(AppTheme.spacing.md))
+
+            // TODO: Add section 1 content
+            // Use mergeDescendants for list items
+            // Use clickable(onClickLabel = ...) for interactive items
+            // Use contentDescription for informative icons
+            // Use null contentDescription for decorative icons
+
+            Spacer(Modifier.height(AppTheme.spacing.xl))
+
+            // ── Section 2 ────────────────────────────────────────────
+            Text(
+                text = stringResource(Res.string.{{screen_name}}_section_two_title),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.semantics { heading() },
+            )
+            Spacer(Modifier.height(AppTheme.spacing.md))
+
+            // TODO: Add section 2 content
+
+            Spacer(Modifier.height(AppTheme.spacing.xl))
+
+            // ── Status Message (LiveRegion) ──────────────────────────
+            uiState.statusMessage?.let { status ->
+                Text(
+                    text = status,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.semantics {
+                        liveRegion = LiveRegionMode.Polite
+                    },
+                )
+            }
+        }
+    }
+}
+
+// @Preview
+// @Composable
+// private fun {{ScreenName}}ScreenPreview() {
+//     AppTheme {
+//         {{ScreenName}}ScreenContent(
+//             uiState = {{ScreenName}}UiState(),
+//             onNavigateBack = {},
+//             onRefresh = {},
+//             onRetry = {},
+//         )
+//     }
+// }

@@ -1,0 +1,65 @@
+// Type-Safe Preference Keys Template
+//
+// Usage: Copy and replace placeholders marked with {{...}}.
+// Each preference key group should be a sealed interface with a companion
+// object holding the keys. This prevents key name collisions and provides
+// IDE-navigable references.
+
+package {your.package}.core.datastore
+
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+
+// Session Keys -- tokens and user identification
+sealed interface SessionKeys {
+    companion object {
+        val ACCESS_TOKEN: Preferences.Key<String> =
+            stringPreferencesKey("session.accessToken")
+        val REFRESH_TOKEN: Preferences.Key<String> =
+            stringPreferencesKey("session.refreshToken")
+        val USER_ID: Preferences.Key<String> =
+            stringPreferencesKey("session.userId")
+    }
+}
+
+// {{GROUP_NAME}} Keys -- {{description}}
+//
+// sealed interface {{GroupName}}Keys {
+//     companion object {
+//         val {{KEY_NAME}}: Preferences.Key<{{Type}}> =
+//             {{type}}PreferencesKey("{{group}}.{{keyName}}")
+//
+//         // Available key types:
+//         //   stringPreferencesKey(name)      -> Preferences.Key<String>
+//         //   intPreferencesKey(name)          -> Preferences.Key<Int>
+//         //   longPreferencesKey(name)         -> Preferences.Key<Long>
+//         //   floatPreferencesKey(name)        -> Preferences.Key<Float>
+//         //   doublePreferencesKey(name)       -> Preferences.Key<Double>
+//         //   booleanPreferencesKey(name)      -> Preferences.Key<Boolean>
+//         //   stringSetPreferencesKey(name)    -> Preferences.Key<Set<String>>
+//     }
+// }
+
+// Example: App Preferences
+sealed interface AppKeys {
+    companion object {
+        val ONBOARDING_COMPLETE: Preferences.Key<Boolean> =
+            booleanPreferencesKey("app.onboardingComplete")
+        val THEME_MODE: Preferences.Key<String> =
+            stringPreferencesKey("app.themeMode")
+        val LANGUAGE: Preferences.Key<String> =
+            stringPreferencesKey("app.language")
+        val NOTIFICATION_COUNT: Preferences.Key<Int> =
+            intPreferencesKey("app.notificationCount")
+        val LAST_SYNC_TIMESTAMP: Preferences.Key<Long> =
+            longPreferencesKey("app.lastSyncTimestamp")
+        val FAVORITE_IDS: Preferences.Key<Set<String>> =
+            stringSetPreferencesKey("app.favoriteIds")
+    }
+}

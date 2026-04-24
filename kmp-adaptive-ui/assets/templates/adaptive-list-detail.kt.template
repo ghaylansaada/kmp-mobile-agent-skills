@@ -1,0 +1,267 @@
+/**
+ * Template: Adaptive List-Detail Screen
+ *
+ * Replace {{FeatureName}} with your feature name (e.g., "Messages").
+ * Replace {{featureName}} with the camelCase name (e.g., "messages").
+ * Replace {{ItemType}} with your domain model type (e.g., "Message").
+ * Replace {{itemType}} with the camelCase model name (e.g., "message").
+ *
+ * This template uses NavigableListDetailPaneScaffold for automatic
+ * single-pane / dual-pane transitions based on window size class.
+ */
+
+package {your.package}.presentation.{{featureName}}
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
+import androidx.compose.material3.adaptive.navigation.BackNavigationBehavior
+import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
+import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import mobile.composeapp.generated.resources.Res
+import mobile.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
+import {your.package}.ui.theme.AppTheme
+import org.koin.compose.koinInject
+
+// --- Stateful screen composable ---
+
+@Composable
+fun {{FeatureName}}ListDetailScreen(
+    modifier: Modifier = Modifier,
+    viewModel: {{FeatureName}}ViewModel = koinInject(),
+) {
+    val items by viewModel.items.collectAsState()
+
+    {{FeatureName}}ListDetailContent(
+        items = items,
+        modifier = modifier,
+    )
+}
+
+// --- Stateless content composable (safe for @Preview) ---
+
+@Composable
+fun {{FeatureName}}ListDetailContent(
+    items: List<{{ItemType}}>,
+    modifier: Modifier = Modifier,
+) {
+    val navigator = rememberListDetailPaneScaffoldNavigator<String>()
+
+    NavigableListDetailPaneScaffold(
+        modifier = modifier,
+        navigator = navigator,
+        defaultBackBehavior = BackNavigationBehavior.PopUntilScaffoldValueChange,
+        listPane = {
+            {{FeatureName}}ListPane(
+                items = items,
+                onItemClick = { itemId ->
+                    navigator.navigateTo(
+                        pane = ListDetailPaneScaffoldRole.Detail,
+                        contentKey = itemId,
+                    )
+                },
+            )
+        },
+        detailPane = {
+            val selectedItemId = navigator.currentDestination?.contentKey
+            if (selectedItemId != null) {
+                val selectedItem = items.firstOrNull { it.id == selectedItemId }
+                if (selectedItem != null) {
+                    {{FeatureName}}DetailPane(item = selectedItem)
+                }
+            } else {
+                {{FeatureName}}EmptyDetailPlaceholder()
+            }
+        },
+    )
+}
+
+// --- List pane ---
+
+@Composable
+fun {{FeatureName}}ListPane(
+    items: List<{{ItemType}}>,
+    onItemClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        Text(
+            text = stringResource(Res.string.{{featureName}}_list_title),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(
+                horizontal = AppTheme.spacing.lg,
+                vertical = AppTheme.spacing.md,
+            ),
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = AppTheme.spacing.lg,
+                end = AppTheme.spacing.lg,
+                bottom = AppTheme.spacing.lg,
+            ),
+            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm),
+        ) {
+            items(
+                items = items,
+                key = { it.id },
+            ) { item ->
+                {{FeatureName}}ListItem(
+                    item = item,
+                    onClick = { onItemClick(item.id) },
+                )
+            }
+        }
+    }
+}
+
+// --- List item ---
+
+@Composable
+fun {{FeatureName}}ListItem(
+    item: {{ItemType}},
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val itemContentDescription = stringResource(Res.string.cd_{{featureName}}_item, item.title)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = AppTheme.sizing.minTouchTarget)
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = itemContentDescription },
+        shape = RoundedCornerShape(AppTheme.corners.lg),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AppTheme.spacing.lg),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(AppTheme.spacing.xs))
+                Text(
+                    text = item.subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                )
+            }
+
+            Spacer(Modifier.width(AppTheme.spacing.sm))
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null, // Decorative, row has contentDescription
+                modifier = Modifier.size(AppTheme.sizing.iconMd),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+// --- Detail pane ---
+
+@Composable
+fun {{FeatureName}}DetailPane(
+    item: {{ItemType}},
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(AppTheme.spacing.lg),
+    ) {
+        Text(
+            text = item.title,
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        Spacer(Modifier.height(AppTheme.spacing.sm))
+
+        Text(
+            text = item.subtitle,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(AppTheme.spacing.xl))
+
+        Text(
+            text = item.description,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        // TODO: Add feature-specific detail content
+    }
+}
+
+// --- Empty state for detail pane (shown on expanded when no item selected) ---
+
+@Composable
+fun {{FeatureName}}EmptyDetailPlaceholder(
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(Res.string.{{featureName}}_select_item_prompt),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+// --- Domain model placeholder (replace with actual model) ---
+
+data class {{ItemType}}(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val description: String,
+)

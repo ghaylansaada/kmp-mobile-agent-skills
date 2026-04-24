@@ -1,0 +1,358 @@
+# =============================================================================
+# GitLab CI/CD pipeline template for KMP Mobile Template
+# Place at: .gitlab-ci.yml (repository root)
+#
+# IMPORTANT:
+#   - Android jobs run on Docker (Linux shared runners).
+#   - iOS jobs require a self-hosted macOS runner tagged "macos".
+#   - Configuration cache is OFF (KSP incompatible).
+#   - --no-daemon on all Gradle commands (ephemeral CI runners).
+#   - KONAN_DATA_DIR redirected to project dir so GitLab can cache it.
+#   - Set CI/CD variables in Settings > CI/CD > Variables (Masked + Protected).
+#
+# See references/gitlab-ci.md for full documentation.
+# =============================================================================
+
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+
+# ---------------------------------------------------------------------------
+# Global variables
+# ---------------------------------------------------------------------------
+variables:
+  JAVA_VERSION: "..."
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle-home"
+  KONAN_DATA_DIR: "$CI_PROJECT_DIR/.konan"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g -XX:+UseParallelGC"
+
+# ---------------------------------------------------------------------------
+# Cache templates (anchored for reuse)
+# ---------------------------------------------------------------------------
+.gradle-cache: &gradle-cache
+  key:
+    files:
+      - gradle/wrapper/gradle-wrapper.properties
+      - gradle/libs.versions.toml
+    prefix: gradle-${CI_JOB_NAME_SLUG}
+  paths:
+    - .gradle-home/caches/
+    - .gradle-home/wrapper/
+    - .kotlin/
+  policy: pull-push
+
+.konan-cache: &konan-cache
+  key:
+    files:
+      - gradle/libs.versions.toml
+    prefix: konan
+  paths:
+    - .konan/
+  policy: pull-push
+
+# ---------------------------------------------------------------------------
+# Rule templates
+# ---------------------------------------------------------------------------
+.mr-and-default-rules:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+.tag-rules:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v.*/
+
+# ===========================================================================
+# LINT
+# ===========================================================================
+lint-android:
+  stage: lint
+  image: "..."  # Docker image with Android SDK + JDK
+  extends: .mr-and-default-rules
+  cache:
+    - *gradle-cache
+  before_script:
+    - chmod +x gradlew
+  script:
+    - ./gradlew :composeApp:lintDebug --no-daemon
+  artifacts:
+    when: always
+    paths:
+      - composeApp/build/reports/lint-results-debug.html
+    expire_in: 7 days
+  interruptible: true
+
+# ===========================================================================
+# TEST
+# ===========================================================================
+test-android:
+  stage: test
+  image: "..."  # Docker image with Android SDK + JDK
+  extends: .mr-and-default-rules
+  cache:
+    - *gradle-cache
+  before_script:
+    - chmod +x gradlew
+  script:
+    - ./gradlew :composeApp:testDebugUnitTest --no-daemon
+  artifacts:
+    when: always
+    paths:
+      - composeApp/build/reports/tests/
+    reports:
+      junit: composeApp/build/test-results/**/TEST-*.xml
+    expire_in: 7 days
+  interruptible: true
+
+test-ios:
+  stage: test
+  extends: .mr-and-default-rules
+  tags:
+    - macos
+  cache:
+    - *gradle-cache
+    - *konan-cache
+  before_script:
+    - chmod +x gradlew
+  script:
+    - ./gradlew :composeApp:iosSimulatorArm64Test --no-daemon
+  artifacts:
+    when: always
+    reports:
+      junit: composeApp/build/test-results/**/TEST-*.xml
+    expire_in: 7 days
+  interruptible: true
+
+# ===========================================================================
+# BUILD
+# ===========================================================================
+build-android-debug:
+  stage: build
+  image: "..."  # Docker image with Android SDK + JDK
+  extends: .mr-and-default-rules
+  cache:
+    - *gradle-cache
+  before_script:
+    - chmod +x gradlew
+  script:
+    - ./gradlew :composeApp:assembleDebug --no-daemon
+  artifacts:
+    paths:
+      - composeApp/build/outputs/apk/debug/*.apk
+    expire_in: 7 days
+  interruptible: true
+
+build-ios-debug:
+  stage: build
+  extends: .mr-and-default-rules
+  tags:
+    - macos
+  cache:
+    - *gradle-cache
+    - *konan-cache
+  before_script:
+    - chmod +x gradlew
+  script:
+    - ./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64 --no-daemon
+    - xcodebuild build
+        -project iosApp/iosApp.xcodeproj
+        -scheme iosApp
+        -configuration Debug
+        -destination "platform=iOS Simulator,name=iPhone 16,OS=latest"
+        ENABLE_BITCODE=NO
+        CODE_SIGNING_ALLOWED=NO
+  interruptible: true
+
+build-android-release:
+  stage: build
+  image: "..."  # Docker image with Android SDK + JDK
+  extends: .tag-rules
+  cache:
+    - *gradle-cache
+  before_script:
+    - chmod +x gradlew
+    - mkdir -p composeApp/keystore
+    - echo "$KEYSTORE_BASE64" | base64 -d > composeApp/keystore/release.keystore
+    - |
+      VERSION_NAME="${CI_COMMIT_TAG#v}"
+      VERSION_CODE=$(grep "app.versionCode" gradle.properties | cut -d'=' -f2)
+      echo "VERSION_NAME=$VERSION_NAME" >> build.env
+      echo "VERSION_CODE=$VERSION_CODE" >> build.env
+  script:
+    - source build.env
+    - ./gradlew :composeApp:bundleRelease
+        -Pflavor=prod
+        -Papp.versionName=$VERSION_NAME
+        -Papp.versionCode=$VERSION_CODE
+        --no-daemon
+    - ./gradlew :composeApp:assembleRelease
+        -Pflavor=prod
+        -Papp.versionName=$VERSION_NAME
+        -Papp.versionCode=$VERSION_CODE
+        --no-daemon
+  artifacts:
+    paths:
+      - composeApp/build/outputs/bundle/release/*.aab
+      - composeApp/build/outputs/apk/release/*.apk
+      - composeApp/build/outputs/mapping/release/mapping.txt
+    reports:
+      dotenv: build.env
+    expire_in: 30 days
+  variables:
+    KEYSTORE_FILE: "keystore/release.keystore"
+    KEYSTORE_PASSWORD: "$KEYSTORE_PASSWORD"
+    KEY_ALIAS: "$KEY_ALIAS"
+    KEY_PASSWORD: "$KEY_PASSWORD"
+
+build-ios-release:
+  stage: build
+  extends: .tag-rules
+  tags:
+    - macos
+  cache:
+    - *gradle-cache
+    - *konan-cache
+  before_script:
+    - chmod +x gradlew
+    - |
+      VERSION_NAME="${CI_COMMIT_TAG#v}"
+      BUILD_NUMBER=$(grep "app.versionCode" gradle.properties | cut -d'=' -f2)
+    # Set up signing keychain
+    - security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+    - security default-keychain -s build.keychain
+    - security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+    - echo "$IOS_CERTIFICATE_BASE64" | base64 -d > certificate.p12
+    - security import certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+    - security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+    - mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+    - echo "$IOS_PROVISION_PROFILE_BASE64" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+  script:
+    - ./gradlew :composeApp:linkReleaseFrameworkIosArm64 -Pflavor=prod --no-daemon
+    - cd iosApp
+    - agvtool new-version -all "$BUILD_NUMBER"
+    - agvtool new-marketing-version "$VERSION_NAME"
+    - cd ..
+    - xcodebuild archive
+        -project iosApp/iosApp.xcodeproj
+        -scheme iosApp
+        -configuration Release
+        -archivePath build/iosApp.xcarchive
+        -destination "generic/platform=iOS"
+        ENABLE_BITCODE=NO
+        MARKETING_VERSION="$VERSION_NAME"
+        CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
+    - xcodebuild -exportArchive
+        -archivePath build/iosApp.xcarchive
+        -exportOptionsPlist iosApp/ExportOptions.plist
+        -exportPath build/ipa
+  after_script:
+    - security delete-keychain build.keychain || true
+  artifacts:
+    paths:
+      - build/ipa/iosApp.ipa
+      - build/iosApp.xcarchive/dSYMs/
+    expire_in: 30 days
+
+# ===========================================================================
+# DEPLOY
+# ===========================================================================
+deploy-android-play-store:
+  stage: deploy
+  image: "..."  # Docker image with Ruby + Fastlane
+  extends: .tag-rules
+  needs:
+    - job: build-android-release
+      artifacts: true
+  before_script:
+    - gem install fastlane --no-document
+    - mkdir -p fastlane
+    - echo "$PLAY_STORE_KEY_JSON" | base64 -d > fastlane/play-store-key.json
+  script:
+    - fastlane android deploy_internal
+  environment:
+    name: production/android
+    url: "https://play.google.com/store/apps/details?id={your.package}"
+  variables:
+    VERSION_NAME: "$VERSION_NAME"
+    VERSION_CODE: "$VERSION_CODE"
+
+deploy-android-firebase:
+  stage: deploy
+  image: "..."  # Docker image with Node.js + Firebase CLI
+  extends: .tag-rules
+  needs:
+    - job: build-android-release
+      artifacts: true
+  before_script:
+    - echo "$FIREBASE_SERVICE_ACCOUNT_JSON" | base64 -d > /tmp/firebase-sa.json
+    - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+  script:
+    - npx firebase-tools appdistribution:distribute
+        composeApp/build/outputs/apk/release/composeApp-release.apk
+        --app "$FIREBASE_APP_ID"
+        --groups "stakeholders"
+        --release-notes "Release ${CI_COMMIT_TAG}"
+  environment:
+    name: staging/android
+
+deploy-ios-testflight:
+  stage: deploy
+  extends: .tag-rules
+  tags:
+    - macos
+  needs:
+    - job: build-ios-release
+      artifacts: true
+  before_script:
+    - gem install fastlane --no-document
+    - echo "$APP_STORE_CONNECT_KEY_BASE64" | base64 -d > AuthKey.p8
+  script:
+    - fastlane ios beta
+  after_script:
+    - rm -f AuthKey.p8
+  environment:
+    name: production/ios
+    url: "https://appstoreconnect.apple.com"
+  variables:
+    APP_STORE_CONNECT_KEY_ID: "$APP_STORE_CONNECT_KEY_ID"
+    APP_STORE_CONNECT_ISSUER_ID: "$APP_STORE_CONNECT_ISSUER_ID"
+    APP_STORE_CONNECT_KEY_BASE64: "$APP_STORE_CONNECT_KEY_BASE64"
+
+deploy-ios-firebase:
+  stage: deploy
+  extends: .tag-rules
+  tags:
+    - macos
+  needs:
+    - job: build-ios-release
+      artifacts: true
+  before_script:
+    - echo "$FIREBASE_SERVICE_ACCOUNT_JSON" | base64 -d > /tmp/firebase-sa.json
+    - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+  script:
+    - npx firebase-tools crashlytics:symbols:upload
+        --app "$FIREBASE_IOS_APP_ID"
+        build/iosApp.xcarchive/dSYMs
+  environment:
+    name: staging/ios
+
+# ===========================================================================
+# GITLAB RELEASE (creates a release object linked to the tag)
+# ===========================================================================
+create-release:
+  stage: deploy
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  extends: .tag-rules
+  needs:
+    - job: build-android-release
+      artifacts: true
+    - job: build-ios-release
+      artifacts: true
+  script:
+    - echo "Creating release for $CI_COMMIT_TAG"
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: "Release $CI_COMMIT_TAG"
+    description: "Release $CI_COMMIT_TAG"

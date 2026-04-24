@@ -1,0 +1,35 @@
+// Template: SKIE Gradle Plugin Configuration
+// See references/setup.md for step-by-step instructions
+//
+// Prerequisite: Add to gradle/libs.versions.toml:
+//   [versions]
+//   skie = "..."
+//   [plugins]
+//   skie = { id = "co.touchlab.skie", version.ref = "skie" }
+//
+// Prerequisite: Register in root build.gradle.kts:
+//   alias(libs.plugins.skie) apply false
+
+// --- Add to composeApp/build.gradle.kts plugins block ---
+plugins {
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.ktorfitGradle)
+    alias(libs.plugins.skie)
+}
+
+// --- Add after kotlin { } block ---
+skie {
+    features {
+        coroutinesInterop = true
+        sealedInterop = true
+        defaultArgumentInterop = true
+        enableSwiftUIObservingPreview = true
+    }
+}
+
+// After setup: rebuild the iOS framework, then Xcode > Product > Clean Build Folder (Cmd+Shift+K)

@@ -1,0 +1,102 @@
+package {your.package}.core.ui
+
+/**
+ * Generic UI state for screens with a single data source and a linear
+ * loading -> success/error lifecycle.
+ *
+ * Usage:
+ * ```
+ * private val _uiState = MutableStateFlow<UiState<MyData>>(UiState.Loading)
+ * val uiState: StateFlow<UiState<MyData>> = _uiState.asStateFlow()
+ * ```
+ *
+ * Compose consumption:
+ * ```
+ * val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+ * when (val state = uiState) {
+ *     is UiState.Loading -> LoadingIndicator()
+ *     is UiState.Success -> Content(state.data)
+ *     is UiState.Error -> ErrorMessage(state.message)
+ *     is UiState.Empty -> EmptyState()
+ * }
+ * ```
+ *
+ * @param T The type of data on success.
+ */
+sealed interface UiState<out T> {
+
+    /**
+     * Initial loading or refresh in progress. No data available yet.
+     *
+     * UI should display a loading indicator and avoid showing stale content.
+     */
+    data object Loading : UiState<Nothing>
+
+    /**
+     * Data loaded successfully.
+     *
+     * UI should render the main content using [data].
+     *
+     * @property data The loaded data of type [T].
+     */
+    data class Success<T>(val data: T) : UiState<T>
+
+    /**
+     * An error occurred during loading.
+     *
+     * UI should display an error message with an optional retry action.
+     *
+     * @property message Human-readable error description for display.
+     * @property exception Optional underlying exception for logging/crash reporting.
+     */
+    data class Error(
+        val message: String,
+        val exception: Throwable? = null,
+    ) : UiState<Nothing>
+
+    /**
+     * Loading completed successfully but no data is available.
+     *
+     * UI should display an empty state with an explanatory message.
+     */
+    data object Empty : UiState<Nothing>
+}
+
+// ---------------------------------------------------------------------------
+// Extension helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the data if this is [UiState.Success], or null otherwise.
+ *
+ * Useful for accessing data without a full `when` expression:
+ * ```
+ * val name = uiState.dataOrNull()?.name ?: "Unknown"
+ * ```
+ */
+fun <T> UiState<T>.dataOrNull(): T? = (this as? UiState.Success)?.data
+
+/**
+ * Returns true if this state is [UiState.Loading].
+ */
+fun <T> UiState<T>.isLoading(): Boolean = this is UiState.Loading
+
+/**
+ * Returns true if this state is [UiState.Error].
+ */
+fun <T> UiState<T>.isError(): Boolean = this is UiState.Error
+
+/**
+ * Maps the data inside [UiState.Success] using [transform].
+ * All other states pass through unchanged.
+ *
+ * ```
+ * val nameState: UiState<String> = profileState.map { it.name }
+ * ```
+ */
+inline fun <T, R> UiState<T>.map(transform: (T) -> R): UiState<R> = when (this) {
+    is UiState.Loading -> UiState.Loading
+    is UiState.Success -> UiState.Success(transform(data))
+    is UiState.Error -> this
+    is UiState.Empty -> UiState.Empty
+}

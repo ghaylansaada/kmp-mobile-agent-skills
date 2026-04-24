@@ -1,0 +1,165 @@
+# =============================================================================
+# GitHub Actions Android Release workflow template for KMP Mobile Template
+# Place at: .github/workflows/release-android.yml
+# Triggers on version tags (v*) or manual dispatch.
+# For GitLab CI/CD, use assets/snippets/gitlab-ci.yml instead.
+#
+# IMPORTANT:
+#   - Runs on ubuntu-latest (NOT macOS -- Android does not need Xcode).
+#   - Keystore decoded from base64 GitHub secret at build time.
+#   - Builds BOTH AAB (Play Store) and APK (Firebase App Distribution).
+#   - versionCode must strictly increase or Play Store rejects the upload.
+#   - Version is read from gradle.properties (bumped by scripts/bump-version.sh).
+#     Do NOT derive versionCode from tag count -- deleted tags cause collisions.
+# =============================================================================
+name: Release Android
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "Version name (e.g., 1.0.0)"
+        required: true
+      version_code:
+        description: "Version code (e.g., 2)"
+        required: true
+
+env:
+  JAVA_VERSION: "17"
+  JAVA_DISTRIBUTION: "temurin"
+
+jobs:
+  release-android:
+    name: Build & Release Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      - name: Restore Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .kotlin/
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Extract version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION_NAME="${GITHUB_REF#refs/tags/v}"
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          VERSION_CODE=$(grep "app.versionCode" gradle.properties | cut -d'=' -f2)
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+
+      - name: Use manual version
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "VERSION_NAME=${{ github.event.inputs.version_name }}" >> $GITHUB_ENV
+          echo "VERSION_CODE=${{ github.event.inputs.version_code }}" >> $GITHUB_ENV
+
+      - name: Decode keystore
+        run: |
+          mkdir -p composeApp/keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > composeApp/keystore/release.keystore
+
+      - name: Run unit tests
+        run: ./gradlew :composeApp:testReleaseUnitTest --no-daemon
+
+      - name: Build signed AAB
+        run: |
+          ./gradlew :composeApp:bundleRelease \
+            -Pflavor=prod \
+            -Papp.versionName=${{ env.VERSION_NAME }} \
+            -Papp.versionCode=${{ env.VERSION_CODE }} \
+            --no-daemon
+        env:
+          KEYSTORE_FILE: keystore/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Build signed APK
+        run: |
+          ./gradlew :composeApp:assembleRelease \
+            -Pflavor=prod \
+            -Papp.versionName=${{ env.VERSION_NAME }} \
+            -Papp.versionCode=${{ env.VERSION_CODE }} \
+            --no-daemon
+        env:
+          KEYSTORE_FILE: keystore/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-aab
+          path: composeApp/build/outputs/bundle/release/composeApp-release.aab
+          retention-days: 30
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: composeApp/build/outputs/apk/release/composeApp-release.apk
+          retention-days: 30
+
+      - name: Upload mapping file
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapping-txt
+          path: composeApp/build/outputs/mapping/release/mapping.txt
+          retention-days: 90
+
+      - name: Deploy to Play Store (internal track)
+        run: |
+          mkdir -p fastlane
+          echo "${{ secrets.PLAY_STORE_KEY_JSON }}" | base64 -d > fastlane/play-store-key.json
+          gem install fastlane --no-document
+          fastlane android deploy_internal
+        env:
+          VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+
+      - name: Distribute APK via Firebase
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          npm install -g firebase-tools
+          echo "$GOOGLE_APPLICATION_CREDENTIALS" | base64 -d > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+          firebase appdistribution:distribute \
+            composeApp/build/outputs/apk/release/composeApp-release.apk \
+            --app "${{ secrets.FIREBASE_APP_ID }}" \
+            --groups "stakeholders" \
+            --release-notes "Release ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})"
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            composeApp/build/outputs/bundle/release/composeApp-release.aab
+            composeApp/build/outputs/apk/release/composeApp-release.apk
+          generate_release_notes: true

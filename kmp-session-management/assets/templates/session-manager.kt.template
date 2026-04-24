@@ -1,0 +1,55 @@
+package {your.package}.core.session
+
+import {your.package}.data.local.AppDatabase
+import {your.package}.data.local.clearAllTables
+import io.ktor.client.plugins.auth.providers.BearerTokens
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+class SessionManager(
+    private val secureTokenStorage: SecureTokenStorage,
+    private val database: AppDatabase,
+) {
+
+    private val _sessionState = MutableStateFlow<SessionState>(SessionState.Unauthenticated)
+    val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
+
+    fun loadSession() {
+        val access = secureTokenStorage.getAccessToken()
+        val refresh = secureTokenStorage.getRefreshToken()
+        if (access != null && refresh != null) {
+            _sessionState.value = SessionState.Authenticated
+        }
+    }
+
+    fun getTokens(): BearerTokens? {
+        val access = secureTokenStorage.getAccessToken() ?: return null
+        val refresh = secureTokenStorage.getRefreshToken() ?: return null
+        return BearerTokens(
+            accessToken = access.value,
+            refreshToken = refresh.value,
+        )
+    }
+
+    fun setTokens(accessToken: AccessToken, refreshToken: RefreshToken) {
+        secureTokenStorage.setTokens(accessToken, refreshToken)
+        _sessionState.value = SessionState.Authenticated
+    }
+
+    suspend fun revokeSession(reason: SessionState = SessionState.Unauthenticated) {
+        secureTokenStorage.clear()
+        database.clearAllTables()
+        _sessionState.value = reason
+    }
+
+    suspend fun expireSession() {
+        revokeSession(reason = SessionState.Expired)
+    }
+
+    private companion object {
+        // No preference keys needed -- tokens live in SecureTokenStorage.
+        // Non-sensitive user preferences (userId, theme, etc.) remain in
+        // DataStore and are managed by the appropriate feature module.
+    }
+}

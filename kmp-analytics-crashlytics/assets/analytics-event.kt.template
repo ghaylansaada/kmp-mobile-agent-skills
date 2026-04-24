@@ -1,0 +1,19 @@
+// Template for defining typed analytics events.
+// Copy and replace {{...}} placeholders.
+// Event names: snake_case, max 40 chars. Param keys: max 40 chars. String values: max 100 chars.
+
+package {{your_package}}.core.analytics
+
+data class {{EventName}}Event(
+    val {{param1}}: String,
+    val {{param2}}: String? = null,
+) : AnalyticsEvent {
+
+    override val name: String = "{{event_name_snake_case}}"
+
+    override val parameters: Map<String, Any>
+        get() = buildMap {
+            put("{{param1_key}}", {{param1}})
+            {{param2}}?.let { put("{{param2_key}}", it.take(100)) }
+        }
+}
